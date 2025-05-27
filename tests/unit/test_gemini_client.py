@@ -3,7 +3,7 @@ import pytest
 import asyncio
 from src.llm.gemini_client import generate
 from src.config import Config
-from src.logger import get_logger
+from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 @pytest.fixture(autouse=True)

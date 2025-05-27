@@ -6,37 +6,13 @@ from src.utils.logger import get_logger
 from base_data import Data
 import aiohttp
 import asyncio
-import xml.etree.ElementTree as ET
 import pandas as pd
 from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
-from pydantic import BaseModel, HttpUrl, Field
-from typing import Optional, List
+from typing import Optional
 import time
 import random
-
-class NewsItem(BaseModel):
-    title: str
-    link: HttpUrl
-    pub_date: datetime
-    guid: str
-    source_name: Optional[str] = None
-    source_url: Optional[HttpUrl] = None
-    media_url: Optional[HttpUrl] = None
-    media_height: Optional[int] = None
-    media_width: Optional[int] = None
-
-class Channel(BaseModel):
-    title: str
-    link: HttpUrl
-    description: str
-    language: str
-    copyright: str
-    pub_date: datetime
-    ttl: int
-    image_title: str
-    image_link: HttpUrl
-    image_url: HttpUrl
+from src.parsers.yahoo_finance import YahooFinanceParser
+from src.data.models import Channel, NewsItem
 
 class YahooFinanceRSS(Data):
     def __init__(self, url: str = "https://finance.yahoo.com/rss/"):
@@ -46,18 +22,11 @@ class YahooFinanceRSS(Data):
         self.channel = None
         self.df = pd.DataFrame()
         self.session = None
-        # Set a proper user agent that's allowed by Yahoo Finance
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'application/rss+xml, application/xml, text/xml, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-        }
+        self.parser = YahooFinanceParser()
 
     async def __aenter__(self):
         """Async context manager entry"""
-        self.session = aiohttp.ClientSession(headers=self.headers)
+        self.session = aiohttp.ClientSession(headers=self.parser.headers)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -65,87 +34,11 @@ class YahooFinanceRSS(Data):
         if self.session:
             await self.session.close()
 
-    def _validate_yahoo_finance_feed(self, root: ET.Element) -> bool:
-        """Validate if the RSS feed is from Yahoo Finance"""
-        try:
-            channel = root.find('channel')
-            if channel is None:
-                return False
-            
-            title = channel.find('title')
-            if title is None or 'Yahoo Finance' not in title.text:
-                return False
-            
-            return True
-        except Exception as e:
-            self.logger.error(f"Error validating Yahoo Finance feed: {e}")
-            return False
-
-    def _parse_date(self, date_str: str) -> datetime:
-        """Parse date string in either RFC 822 or ISO 8601 format"""
-        try:
-            # Try ISO 8601 format first
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        except ValueError:
-            try:
-                # Try RFC 822 format
-                return parsedate_to_datetime(date_str)
-            except Exception as e:
-                self.logger.error(f"Failed to parse date '{date_str}': {e}")
-                raise
-
-    def _parse_item(self, item: ET.Element) -> Optional[NewsItem]:
-        """Parse a single RSS item into a NewsItem model"""
-        try:
-            # Parse source
-            source_elem = item.find('source')
-            source_name = source_elem.text if source_elem is not None else None
-            source_url = source_elem.get('url') if source_elem is not None else None
-
-            # Parse media content
-            media_content_elem = item.find('.//{http://search.yahoo.com/mrss/}content')
-            media_url = media_content_elem.get('url') if media_content_elem is not None else None
-            media_height = media_content_elem.get('height') if media_content_elem is not None else None
-            media_width = media_content_elem.get('width') if media_content_elem is not None else None
-
-            # Parse pubDate
-            pub_date = self._parse_date(item.find('pubDate').text)
-
-            # Create NewsItem
-            return NewsItem(
-                title=item.find('title').text,
-                link=item.find('link').text,
-                pub_date=pub_date,
-                guid=item.find('guid').text,
-                source_name=source_name,
-                source_url=source_url,
-                media_url=media_url,
-                media_height=media_height,
-                media_width=media_width
-            )
-        except Exception as e:
-            self.logger.error(f"Error parsing RSS item: {e}")
-            return None
-
-    def _parse_channel(self, channel: ET.Element) -> Channel:
-        """Parse channel information into a Channel model"""
-        image_elem = channel.find('image')
-        
-        # Parse pubDate
-        pub_date = self._parse_date(channel.find('pubDate').text)
-
-        return Channel(
-            title=channel.find('title').text,
-            link=channel.find('link').text,
-            description=channel.find('description').text,
-            language=channel.find('language').text,
-            copyright=channel.find('copyright').text,
-            pub_date=pub_date,
-            ttl=int(channel.find('ttl').text),
-            image_title=image_elem.find('title').text,
-            image_link=image_elem.find('link').text,
-            image_url=image_elem.find('url').text
-        )
+    def _ensure_timezone_aware(self, dt: datetime) -> datetime:
+        """Ensure datetime is timezone aware"""
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
 
     async def _fetch_with_retry(self, max_retries: int = 3, initial_delay: float = 1.0):
         """Fetch data with exponential backoff retry logic"""
@@ -155,7 +48,7 @@ class YahooFinanceRSS(Data):
         while retry_count < max_retries:
             try:
                 if not self.session:
-                    self.session = aiohttp.ClientSession(headers=self.headers)
+                    self.session = aiohttp.ClientSession(headers=self.parser.headers)
                 
                 async with self.session.get(self.url) as response:
                     if response.status == 429:
@@ -186,12 +79,6 @@ class YahooFinanceRSS(Data):
                 self.logger.error(f"Unexpected error: {e}")
                 return None
 
-    def _ensure_timezone_aware(self, dt: datetime) -> datetime:
-        """Ensure datetime is timezone aware"""
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt
-
     async def fetch(self, since_time: Optional[str] = None):
         """Fetch news data from Yahoo Finance RSS feed asynchronously
         
@@ -219,28 +106,17 @@ class YahooFinanceRSS(Data):
             if not content:
                 return None
             
-            # Parse the XML content
-            root = ET.fromstring(content)
-            
-            # Validate if it's a Yahoo Finance feed
-            if not self._validate_yahoo_finance_feed(root):
-                self.logger.error("Invalid Yahoo Finance RSS feed")
+            # Use the parser to parse the feed
+            self.channel, items = await self.parser.parse_feed(self.url)
+            if not self.channel or not items:
                 return None
             
-            # Parse channel information
-            channel = root.find('channel')
-            self.channel = self._parse_channel(channel)
-            
-            # Parse all items
-            items = []
-            for item in root.findall('.//item'):
-                news_item = self._parse_item(item)
-                if news_item:
-                    # Ensure both datetimes are timezone aware before comparison
-                    item_date = self._ensure_timezone_aware(news_item.pub_date)
-                    if since_datetime and item_date <= since_datetime:
-                        continue
-                    items.append(news_item)
+            # Filter items by date if since_time is provided
+            if since_datetime:
+                items = [
+                    item for item in items 
+                    if self._ensure_timezone_aware(item.pub_date) > since_datetime
+                ]
             
             # Convert to DataFrame
             self.df = pd.DataFrame([item.model_dump() for item in items])
@@ -250,9 +126,6 @@ class YahooFinanceRSS(Data):
                 self.logger.info(f"Filtered to {len(self.df)} items published after {since_datetime}")
             return self.df
             
-        except ET.ParseError as e:
-            self.logger.error(f"Error parsing XML: {e}")
-            return None
         except Exception as e:
             self.logger.error(f"Unexpected error: {e}")
             return None

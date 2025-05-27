@@ -1,0 +1,7 @@
+logs/
+.pytest_cache/
+.vscode/
+.github/
+.gitignore
+*.sqlite
+test/

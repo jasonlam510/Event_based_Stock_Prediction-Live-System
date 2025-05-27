@@ -5,6 +5,8 @@ backup/
 *.png
 *.h5
 *.keras
+.vscode
+.pytest_cache
 
 
 # Created by https://www.gitignore.io/api/macos,linux,django,python,pycharm

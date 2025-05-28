@@ -39,85 +39,74 @@ class YahooFinanceExtractor(ContentExtractor):
         Returns:
             Optional[str]: The extracted article description from meta tag, or None if extraction failed
         """
+        browser = None
+        context = None
         try:
-            async with async_playwright() as p:
-                # Launch browser with specific options
-                browser = await p.chromium.launch(
-                    headless=True
-                )
-                context = await browser.new_context(
-                    viewport={'width': 1920, 'height': 1080},
-                    user_agent=self.headers['user-agent']
-                )
-                page = await context.new_page()
+            p = await async_playwright().start()
+            # Launch browser with specific options
+            browser = await p.chromium.launch(
+                headless=True
+            )
+            context = await browser.new_context(
+                viewport={'width': 1920, 'height': 1080},
+                user_agent=self.headers['user-agent']
+            )
+            page = await context.new_page()
+            
+            # Set headers
+            await page.set_extra_http_headers(self.headers)
+            
+            # Navigate to URL with more specific waiting conditions
+            logger.info(f"Navigating to {url}")
+            response = await page.goto(
+                url,
+                wait_until='networkidle',  # Wait for network to be idle
+                timeout=30000  # Increase timeout to 30 seconds
+            )
+            
+            if not response:
+                logger.error("Failed to get response from page")
+                return None
+            
+            logger.info(f"Page loaded with status: {response.status}")
+            
+            # Handle cookie consent banner if present
+            try:
+                logger.info("Checking for cookie consent banner...")
+                # Wait for and click the accept button
+                await page.wait_for_selector('button[type="submit"]', timeout=5000)
+                await page.click('button[type="submit"]')
+                logger.info("Accepted cookie consent")
+                # Wait a bit for the banner to disappear
+                await page.wait_for_timeout(1000)
+            except TimeoutError:
+                logger.info("No cookie consent banner found or already accepted")
+            
+            
+            # Wait for meta description to be available and get its content
+            description = await page.evaluate('''() => {
+                const meta = document.querySelector('meta[name="description"]');
+                return meta ? meta.getAttribute('content') : null;
+            }''')
+            
+            if not description:
+                # If not found, try to force a page reload
+                logger.info("Meta description not found, trying page reload...")
+                await page.reload(wait_until='networkidle')
+                await page.wait_for_timeout(5000)
                 
-                # Set headers
-                await page.set_extra_http_headers(self.headers)
-                
-                # Navigate to URL with more specific waiting conditions
-                logger.info(f"Navigating to {url}")
-                response = await page.goto(
-                    url,
-                    wait_until='networkidle',  # Wait for network to be idle
-                    timeout=30000  # Increase timeout to 30 seconds
-                )
-                
-                if not response:
-                    logger.error("Failed to get response from page")
-                    return None
-                
-                logger.info(f"Page loaded with status: {response.status}")
-                
-                # Handle cookie consent banner if present
-                try:
-                    logger.info("Checking for cookie consent banner...")
-                    # Wait for and click the accept button
-                    await page.wait_for_selector('button[type="submit"]', timeout=5000)
-                    await page.click('button[type="submit"]')
-                    logger.info("Accepted cookie consent")
-                    # Wait a bit for the banner to disappear
-                    await page.wait_for_timeout(1000)
-                except TimeoutError:
-                    logger.info("No cookie consent banner found or already accepted")
-                
-                # Debug: Get and log the page content
-                content = await page.content()
-                logger.debug("Page content: %s", content)
-                
-                # Debug: Get all meta tags
-                meta_tags = await page.evaluate('''() => {
-                    const metas = document.getElementsByTagName('meta');
-                    return Array.from(metas).map(meta => ({
-                        name: meta.getAttribute('name'),
-                        content: meta.getAttribute('content')
-                    }));
-                }''')
-                logger.debug("Meta tags found: %s", meta_tags)
-                
-                # Wait for meta description to be available and get its content
                 description = await page.evaluate('''() => {
                     const meta = document.querySelector('meta[name="description"]');
                     return meta ? meta.getAttribute('content') : null;
                 }''')
+            
+            if description:
+                logger.info("Successfully extracted meta description")
+                return description
+            
+            logger.warning(f"No meta description found at {url}")
+            return None
                 
-                if not description:
-                    # If not found, try to force a page reload
-                    logger.info("Meta description not found, trying page reload...")
-                    await page.reload(wait_until='networkidle')
-                    await page.wait_for_timeout(5000)
-                    
-                    description = await page.evaluate('''() => {
-                        const meta = document.querySelector('meta[name="description"]');
-                        return meta ? meta.getAttribute('content') : null;
-                    }''')
-                
-                if description:
-                    logger.info("Successfully extracted meta description")
-                    return description
-                
-                logger.warning(f"No meta description found at {url}")
-                return None
-                    
         except TimeoutError as e:
             logger.error(f"Timeout waiting for content at {url}: {str(e)}")
             return None
@@ -126,8 +115,18 @@ class YahooFinanceExtractor(ContentExtractor):
             return None
         finally:
             # Ensure browser is closed even if an error occurs
-            try:
-                await context.close()
-                await browser.close()
-            except Exception as e:
-                logger.error(f"Error closing browser: {str(e)}") 
+            if context:
+                try:
+                    await context.close()
+                except Exception as e:
+                    logger.error(f"Error closing context: {str(e)}")
+            if browser:
+                try:
+                    await browser.close()
+                except Exception as e:
+                    logger.error(f"Error closing browser: {str(e)}")
+            if 'p' in locals():
+                try:
+                    await p.stop()
+                except Exception as e:
+                    logger.error(f"Error stopping playwright: {str(e)}") 

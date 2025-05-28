@@ -1,6 +1,9 @@
 import os
 from google import genai
 from google.genai import types
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
+from google.api_core import exceptions
+import logging
 
 import sys
 from pathlib import Path
@@ -26,6 +29,13 @@ def get_client():
     api_key = config.get_key('GEMINI_API_KEY')
     return genai.Client(api_key=api_key)
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type(exceptions.ServiceUnavailable),
+    reraise=True,
+    before_sleep=before_sleep_log(logger, logging.INFO)
+)
 async def generate(
     contents: str, 
     model: str = "gemini-2.0-flash-lite", 
@@ -43,6 +53,7 @@ async def generate(
         
     Raises:
         ValueError: If an invalid model is specified or if content is empty
+        exceptions.ServiceUnavailable: If the service is temporarily unavailable (will retry)
     """
     if not contents or contents == "":
         error_msg = "Content cannot be empty"
@@ -54,7 +65,6 @@ async def generate(
         logger.error(error_msg)
         raise ValueError(error_msg)
     
-    logger.debug("Generating content with model: %s", model)
     try:
         client = get_client()
         response = await client.aio.models.generate_content(

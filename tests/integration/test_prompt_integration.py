@@ -1,7 +1,7 @@
 import pytest
 import os
 from pathlib import Path
-from src.llm.prompt import analyze_news, NewsAnalysis
+from src.llm.gemini_news_analyzer import analyze_news, NewsAnalysis
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -49,7 +49,7 @@ async def test_gemini_api_connection(sample_news_cases):
         result = await analyze_news(
             content=case["content"],
             content_name="headline",
-            market_reference="tech sector"
+            stock_name="S&P500"
         )
         
         # Verify the result is a NewsAnalysis object

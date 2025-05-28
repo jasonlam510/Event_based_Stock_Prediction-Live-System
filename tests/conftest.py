@@ -1,6 +1,8 @@
 import pytest
-import os
+import sys
 from pathlib import Path
+project_root = Path.cwd() # Get the current directory
+sys.path.append(str(project_root))
 
 @pytest.fixture
 def mock_env_vars(monkeypatch):

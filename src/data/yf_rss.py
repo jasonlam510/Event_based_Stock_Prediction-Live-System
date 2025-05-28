@@ -107,8 +107,8 @@ class YahooFinanceRSS(Data):
             if not content:
                 return None
             
-            # Use the parser to parse the feed
-            self.channel, items = await self.parser.parse_feed(self.url)
+            # Use the parser to parse the feed with the content we already fetched
+            self.channel, items = await self.parser.parse_feed(content=content)
             if not self.channel or not items:
                 return None
             

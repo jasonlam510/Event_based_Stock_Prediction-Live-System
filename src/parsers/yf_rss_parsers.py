@@ -104,46 +104,43 @@ class YahooFinanceParser(RSSParser):
             image_url=image_elem.find('url').text
         )
 
-    async def parse_feed(self, url: str) -> Tuple[Channel, List[NewsItem]]:
+    async def parse_feed(self, content: str) -> Tuple[Channel, List[NewsItem]]:
         """Parse Yahoo Finance RSS feed.
         
         Args:
-            url (str): The URL of the Yahoo Finance RSS feed
+            content (str): The XML content to parse
+            url (str, optional): The URL of the RSS feed. Only needed if content is not provided.
             
         Returns:
             Tuple[Channel, List[NewsItem]]: A tuple containing the channel information
             and a list of news items
         """
         try:
-            async with aiohttp.ClientSession(headers=self.headers) as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        content = await response.text()
-                        
-                        # Parse the XML content
-                        root = ET.fromstring(content)
-                        
-                        # Validate if it's a Yahoo Finance feed
-                        if not self._validate_yahoo_finance_feed(root):
-                            logger.error("Invalid Yahoo Finance RSS feed")
-                            return None, []
-                        
-                        # Parse channel information
-                        channel = root.find('channel')
-                        channel_info = self._parse_channel(channel)
-                        
-                        # Parse all items
-                        items = []
-                        for item in root.findall('.//item'):
-                            news_item = self._parse_item(item)
-                            if news_item:
-                                items.append(news_item)
-                        
-                        return channel_info, items
-                    else:
-                        logger.error(f"Failed to fetch RSS feed: {response.status}")
-                        return None, []
-                        
+            if content is None:
+                logger.error("Content must be provided")
+                return None, []
+                    
+            # Parse the XML content
+            root = ET.fromstring(content)
+            
+            # Validate if it's a Yahoo Finance feed
+            if not self._validate_yahoo_finance_feed(root):
+                logger.error("Invalid Yahoo Finance RSS feed")
+                return None, []
+            
+            # Parse channel information
+            channel = root.find('channel')
+            channel_info = self._parse_channel(channel)
+            
+            # Parse all items
+            items = []
+            for item in root.findall('.//item'):
+                news_item = self._parse_item(item)
+                if news_item:
+                    items.append(news_item)
+            
+            return channel_info, items
+                
         except ET.ParseError as e:
             logger.error(f"Error parsing XML: {e}")
             return None, []

@@ -10,10 +10,11 @@ import asyncio
 import pandas as pd
 from datetime import datetime, timezone
 from typing import Optional
-import time
 import random
 from src.parsers.yf_rss_parsers import YahooFinanceParser
 from src.data.models import Channel, NewsItem
+from src.llm.gemini_news_analyzer import analyze_news
+from src.extractors.yf_news_extractors import YahooFinanceExtractor
 
 class YahooFinanceRSS(Data):
     def __init__(self, url: str = "https://finance.yahoo.com/rss/"):
@@ -27,13 +28,13 @@ class YahooFinanceRSS(Data):
 
     async def __aenter__(self):
         """Async context manager entry"""
-        self.session = aiohttp.ClientSession(headers=self.parser.headers)
+        self.session = await aiohttp.ClientSession(headers=self.parser.headers).__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit"""
         if self.session:
-            await self.session.close()
+            await self.session.__aexit__(exc_type, exc_val, exc_tb)
 
     def _ensure_timezone_aware(self, dt: datetime) -> datetime:
         """Ensure datetime is timezone aware"""
@@ -49,7 +50,7 @@ class YahooFinanceRSS(Data):
         while retry_count < max_retries:
             try:
                 if not self.session:
-                    self.session = aiohttp.ClientSession(headers=self.parser.headers)
+                    raise RuntimeError("Session not initialized. Use YahooFinanceRSS as an async context manager.")
                 
                 async with self.session.get(self.url) as response:
                     if response.status == 429:
@@ -121,7 +122,7 @@ class YahooFinanceRSS(Data):
                     item for item in items 
                     if self._ensure_timezone_aware(item.pub_date) > since_datetime
                 ]
-                self.logger.info(f"Filtered to {len(items)} items published after {since_datetime}")
+                self.logger.info(f"Found {len(items)} items published after {since_datetime}")
             
             # Convert to DataFrame
             self.df = pd.DataFrame([item.model_dump() for item in items])
@@ -143,10 +144,6 @@ class YahooFinanceRSS(Data):
             return None
 
         try:
-            # Import required modules
-            from src.llm.gemini_news_analyzer import analyze_news
-            from src.extractors.yf_news_extractors import YahooFinanceExtractor
-
             # Create extractor instance
             extractor = YahooFinanceExtractor()
             analysis_results = []
@@ -208,7 +205,7 @@ class YahooFinanceRSS(Data):
 if __name__ == "__main__":
     async def main():
         async with YahooFinanceRSS() as yahoo_finance:
-            since_time = '2025-05-28 11:27:00-04:00'
+            since_time = '2025-05-28 12:30:00-04:00'
             df = await yahoo_finance.fetch(since_time=since_time) 
             
             if df is not None and not df.empty:
@@ -228,7 +225,7 @@ if __name__ == "__main__":
                 print(f"Total Articles: {len(df)}")
 
             else:
-                print("Failed to fetch data. Please try again later.")
+                print("No data fetched. Please try again later.")
             
             
 

@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
-project_root = Path.cwd()  # Get the current directory
-sys.path.append(str(project_root))
+if __name__ == "__main__":
+    project_root = Path.cwd()  # Get the current directory
+    sys.path.append(str(project_root))
 from src.utils.logger import get_logger
-from base_data import Data
+from src.data.base_data import Data
 import aiohttp
 import asyncio
 import pandas as pd
@@ -11,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Optional
 import time
 import random
-from src.parsers.yahoo_finance import YahooFinanceParser
+from src.parsers.yf_rss_parsers import YahooFinanceParser
 from src.data.models import Channel, NewsItem
 
 class YahooFinanceRSS(Data):
@@ -79,7 +80,7 @@ class YahooFinanceRSS(Data):
                 self.logger.error(f"Unexpected error: {e}")
                 return None
 
-    async def fetch(self, since_time: Optional[str] = None):
+    async def fetch(self, since_time: Optional[str] = None) -> Optional[pd.DataFrame]:
         """Fetch news data from Yahoo Finance RSS feed asynchronously
         
         Args:
@@ -111,34 +112,104 @@ class YahooFinanceRSS(Data):
             if not self.channel or not items:
                 return None
             
+            # Log total number of items fetched before filtering
+            self.logger.info(f"Successfully fetched {len(items)} news items")
+            
             # Filter items by date if since_time is provided
             if since_datetime:
                 items = [
                     item for item in items 
                     if self._ensure_timezone_aware(item.pub_date) > since_datetime
                 ]
+                self.logger.info(f"Filtered to {len(items)} items published after {since_datetime}")
             
             # Convert to DataFrame
             self.df = pd.DataFrame([item.model_dump() for item in items])
             
-            self.logger.info(f"Successfully fetched {len(self.df)} news items")
-            if since_datetime:
-                self.logger.info(f"Filtered to {len(self.df)} items published after {since_datetime}")
             return self.df
             
         except Exception as e:
             self.logger.error(f"Unexpected error: {e}")
             return None
 
-    def process(self):
-        """Process the fetched Yahoo Finance data"""
-        # Implement Yahoo Finance processing logic here
-        pass
+    async def process(self, stock_name: str = "S&P500"):
+        """Process the fetched Yahoo Finance data by analyzing each news item using Gemini
+        
+        Args:
+            stock_name (str): The stock context for relevance scoring. Defaults to "S&P500".
+        """
+        if self.df.empty:
+            self.logger.warning("No data to process. Please fetch data first.")
+            return None
+
+        try:
+            # Import required modules
+            from src.llm.gemini_news_analyzer import analyze_news
+            from src.extractors.yf_news_extractors import YahooFinanceExtractor
+
+            # Create extractor instance
+            extractor = YahooFinanceExtractor()
+            analysis_results = []
+            
+            # Process each news item
+            for _, row in self.df.iterrows():
+                try:
+                    # Get the news guid and URL
+                    guid = row['guid']
+                    url = str(row['link'])  # Convert HttpUrl to string
+                    
+                    # Extract description using the extractor
+                    description = await extractor.extract_content(url)
+                    
+                    if not description:
+                        self.logger.warning(f"Could not extract description for {url}")
+                        continue
+                    
+                    # Analyze the news using Gemini with the extracted description
+                    analysis = await analyze_news(
+                        content=description,
+                        content_name="description",
+                        stock_name=stock_name
+                    )
+                    
+                    # Add analysis results to the list
+                    analysis_results.append({
+                        'guid': guid,
+                        'description': description,
+                        **analysis.model_dump()  # Include all analysis fields dynamically
+                    })
+                    
+                    self.logger.info(f"Analyzed news with guid: {guid}")
+                    
+                except Exception as e:
+                    self.logger.error(f"Error analyzing news item: {e}")
+                    continue
+            
+            # Convert results to DataFrame and merge with original data
+            if analysis_results:
+                analysis_df = pd.DataFrame(analysis_results)
+                self.df = pd.merge(
+                    self.df,
+                    analysis_df,
+                    left_on='guid',
+                    right_on='guid',
+                    how='left'
+                )
+                self.logger.info(f"Successfully analyzed {len(analysis_results)} news items")
+                return self.df
+            else:
+                self.logger.warning("No analysis results were generated")
+                return None
+
+        except Exception as e:
+            self.logger.error(f"Error in process: {e}")
+            return None
 
 if __name__ == "__main__":
     async def main():
         async with YahooFinanceRSS() as yahoo_finance:
-            df = await yahoo_finance.fetch() 
+            since_time = '2025-05-28 11:27:00-04:00'
+            df = await yahoo_finance.fetch(since_time=since_time) 
             
             if df is not None and not df.empty:
                 # Print Channel Information
@@ -158,6 +229,9 @@ if __name__ == "__main__":
 
             else:
                 print("Failed to fetch data. Please try again later.")
+            
+            
+
 
     # Run the async main function
     asyncio.run(main()) 

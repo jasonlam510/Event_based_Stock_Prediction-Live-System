@@ -1,11 +1,5 @@
 from typing import Literal
 from pydantic import BaseModel, Field
-
-import sys
-from pathlib import Path
-project_root = Path.cwd() # Get the current directory
-sys.path.append(str(project_root))
-
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -49,14 +43,14 @@ class NewsAnalysis(BaseModel):
 def create_news_analysis_prompt(
     content: str,
     content_name: str = "headline",
-    market_reference: str = "market"
+    stock_name: str = "market"
 ) -> str:
     """Create a prompt for news analysis.
     
     Args:
         content (str): The news content to analyze
         content_name (str): The type of content (e.g., "headline", "article")
-        market_reference (str): The market context for relevance scoring
+        stock_name (str): The stock context for relevance scoring
         
     Returns:
         str: The formatted prompt
@@ -68,7 +62,7 @@ def create_news_analysis_prompt(
         f"You are a financial‐news analysis assistant. Given only the {content_name} of the news, "
         f"you must output a valid JSON object with exactly these four fields (no extra keys, no prose):\n"
         f"- sentiment_score: float between -1 (very negative) and 1 (very positive)  \n"
-        f"- relevance_score: float between 0 (irrelevant) and 1 (highly relevant to the {market_reference})  \n"
+        f"- relevance_score: float between 0 (irrelevant) and 1 (highly relevant to the {stock_name})  \n"
         "- event_importance: float between 0 (no market impact) and 1 (major market-moving event)  \n"
         f"- event_type: one of {event_types}\n\n"
         f"**{content_name.capitalize()}:** \"{content}\"\n\n"
@@ -78,7 +72,7 @@ def create_news_analysis_prompt(
 async def analyze_news(
     content: str,
     content_name: str = "headline",
-    market_reference: str = "market",
+    stock_name: str = "market",
     model: str = "gemini-2.0-flash"
 ) -> NewsAnalysis:
     """Analyze news content using Gemini API.
@@ -86,7 +80,7 @@ async def analyze_news(
     Args:
         content (str): The news content to analyze
         content_name (str): The type of content (e.g., "headline", "article")
-        market_reference (str): The market context for relevance scoring
+        stock_name (str): The stock context for relevance scoring
         model (str): The Gemini model to use
         
     Returns:
@@ -95,7 +89,7 @@ async def analyze_news(
     from .gemini_client import generate
     from google.genai import types
     
-    prompt = create_news_analysis_prompt(content, content_name, market_reference)
+    prompt = create_news_analysis_prompt(content, content_name, stock_name)
     
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
@@ -108,4 +102,4 @@ async def analyze_news(
         generate_content_config=config
     )
     
-    return response.parsed
+    return response.parsed 

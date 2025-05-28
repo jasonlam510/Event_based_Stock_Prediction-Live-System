@@ -19,7 +19,7 @@ async def test_fetch_and_process():
     """Test the integration of fetch and process functions"""
     try:
         # Calculate a timestamp from 1 day ago for testing
-        since_time = '2025-05-28 11:30:00-04:00'
+        since_time = '2025-05-28 12:30:00-04:00'
         
         # Use async context manager to ensure proper resource cleanup
         async with YahooFinanceRSS() as rss:

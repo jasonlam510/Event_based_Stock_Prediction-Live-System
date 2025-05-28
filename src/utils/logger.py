@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -29,7 +30,7 @@ class CustomFormatter(logging.Formatter):
 
 def setup_logger(
     name: str,
-    level: int = logging.INFO,
+    level: int,
     log_file: Optional[Path] = None,
     console_output: bool = True
 ) -> logging.Logger:
@@ -81,19 +82,25 @@ def setup_logger(
 
 def get_logger(
     name: str,
-    level: int = logging.INFO,
+    level: Optional[int] = None,
     log_dir: Optional[Path] = None
 ) -> logging.Logger:
     """Get a configured logger instance.
     
     Args:
         name (str): Name of the logger
-        level (int): Logging level (default: INFO)
+        level (Optional[int]): Logging level. If None, determined by ENVIRONMENT:
+                              'prod' -> INFO, 'test' -> DEBUG
         log_dir (Optional[Path]): Directory for log files (default: None)
         
     Returns:
         logging.Logger: Configured logger instance
     """
+    # Determine logging level based on environment if not specified
+    if level is None:
+        env = os.getenv('ENVIRONMENT', 'prod')
+        level = logging.DEBUG if env == 'test' else logging.INFO
+    
     # Set up log file path if log_dir is provided
     log_file = None
     if log_dir:

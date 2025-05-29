@@ -1,7 +1,7 @@
 import aiohttp
 from bs4 import BeautifulSoup
 from typing import Optional
-from src.extractors.base import ContentExtractor
+from archive.extractors.base import ContentExtractor
 from src.utils.logger import get_logger
 from playwright.async_api import async_playwright, TimeoutError
 import json

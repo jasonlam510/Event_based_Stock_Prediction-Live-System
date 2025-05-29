@@ -6,26 +6,28 @@ This is the BSCCS Final Year Project 2024-2025 "Event-based Stock Prediction" su
 
 ![Architecture Diagram](doc/Architecture_Diagram.png)
 
-# Project Structure
+
+# Pipeline Trigger Logic
 
 ```
-src/
-├── config.py                # Configuration settings
-├── main.py                 # Main application entry point
-├── data/
-│   ├── base_data.py        # Base data class
-│   ├── stock.py           # Stock data handling
-│   ├── yf_rss.py          # Yahoo Finance RSS data class
-│   └── google_news.py     # Google News data handling
-├── llm/
-│   ├── gemini_news_analyzer.py  # Renamed from prompt.py
-│   └── gemini_client.py        # Gemini API client
-├── parsers/
-│   ├── base.py            # Base parser interface
-│   └── yahoo_finance.py   # Yahoo Finance specific parser
-├── extractors/
-│   ├── base.py           # Base extractor interface
-│   └── yahoo_finance.py  # Yahoo Finance content extractor
-└── utils/
-    └── logger.py         # Logging utilities
+[RSS Fetcher]
+      ↓
+[Description Extractor]
+      ↓
+[LLM Processor]
+      ↓                        ↘
+[LLM Output Queue]         [Stock Fetcher runs separately on schedule]
+      ↓                        ↓
+      [Combiner → Local AI Model]
+
+```
+
+# Useful postgre command
+```
+select count(*) from analysis_results;
+select count(*) from extracted_content;
+select count(*) from rss_items;
+DROP TABLE IF EXISTS analysis_results CASCADE;
+DROP TABLE IF EXISTS extracted_content CASCADE;
+DROP TABLE IF EXISTS rss_items CASCADE;
 ```

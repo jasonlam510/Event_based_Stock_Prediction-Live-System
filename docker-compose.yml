@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: myfyp_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:I_Love_CityU@postgres:5432/myfypdb
+    volumes:
+      - .:/app
+    networks:
+      - myfyp_network
+
+  postgres:
+    image: timescale/timescaledb-ha:pg16
+    container_name: myfyp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: I_Love_CityU
+      POSTGRES_DB: myfypdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d myfypdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - myfyp_network
+
+volumes:
+  postgres_data:
+    name: myfyp_postgres_data
+
+networks:
+  myfyp_network:
+    name: myfyp_network 

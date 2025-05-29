@@ -4,12 +4,12 @@ from typing import Optional, List
 import aiohttp
 import random
 from src.pipeline.worker import PipelineWorker
-from src.pipeline.queues import RSSItem, PipelineError
+from src.pipeline.queues import YFRSSItem, PipelineError
 from src.parsers.yf_rss_parsers import YahooFinanceParser
 from src.database import Database
 
 class YF_RSSFetcher(PipelineWorker):
-    """Worker that periodically fetches RSS feeds"""
+    """Worker that periodically fetches RSS feeds from Yahoo Finance"""
     
     def __init__(
         self,
@@ -21,7 +21,7 @@ class YF_RSSFetcher(PipelineWorker):
         max_retries: int = 3,
         initial_delay: float = 1.0
     ):
-        super().__init__("rss_fetcher")
+        super().__init__("yf_rss_fetcher")  # Updated name to be more specific
         self.output_queue = output_queue
         self.error_queue = error_queue
         self.db = db
@@ -56,7 +56,7 @@ class YF_RSSFetcher(PipelineWorker):
             return dt.replace(tzinfo=timezone.utc)
         return dt
             
-    async def get_next_item(self) -> Optional[List[RSSItem]]:
+    async def get_next_item(self) -> Optional[List[YFRSSItem]]:
         """Wait for next fetch interval"""
         if not hasattr(self, '_first_run'):
             self._first_run = False
@@ -65,13 +65,13 @@ class YF_RSSFetcher(PipelineWorker):
         await asyncio.sleep(self.fetch_interval)
         return []  # Empty list triggers a new fetch
         
-    async def put_result(self, items: List[RSSItem]):
+    async def put_result(self, items: List[YFRSSItem]):
         """Put fetched items in output queue and store in database"""
         for item in items:
             # Store in database
-            success = await self.db.store_rss_item(item)
+            success = await self.db.store_yf_rss_item(item)  # Updated method name
             if not success:
-                self.logger.error(f"Failed to store RSS item {item.guid} in database")
+                self.logger.error(f"Failed to store Yahoo Finance RSS item {item.guid} in database")
                 continue
                 
             # Put in output queue
@@ -127,11 +127,11 @@ class YF_RSSFetcher(PipelineWorker):
                 
         return None
             
-    async def process(self, _: List[RSSItem]) -> List[RSSItem]:
+    async def process(self, _: List[YFRSSItem]) -> List[YFRSSItem]:
         """Fetch and parse RSS feed"""
         try:
             # Get latest processed publication date
-            latest_pub_date = await self.db.get_latest_pub_date()
+            latest_pub_date = await self.db.get_latest_yf_pub_date()  # Updated method name
             
             # Fetch RSS feed with retry logic
             content = await self._fetch_with_retry()
@@ -144,7 +144,7 @@ class YF_RSSFetcher(PipelineWorker):
                 self.logger.warning("No items found in RSS feed")
                 return []
                 
-            # Convert to RSSItems and filter out already processed items
+            # Convert to YFRSSItems and filter out already processed items
             rss_items = []
             for item in items:
                 # Ensure datetime is timezone aware
@@ -155,7 +155,7 @@ class YF_RSSFetcher(PipelineWorker):
                     self.logger.debug(f"Skipping already processed item: {item.guid} (pub_date: {pub_date})")
                     continue
                 
-                rss_item = RSSItem(
+                rss_item = YFRSSItem(
                     title=item.title,
                     link=item.link,
                     pub_date=pub_date,
@@ -174,7 +174,7 @@ class YF_RSSFetcher(PipelineWorker):
         except Exception as e:
             error = PipelineError(
                 guid="rss_fetch",
-                stage="rss_fetcher",
+                stage="yf_rss_fetcher",  # Updated stage name
                 error=str(e),
                 timestamp=datetime.now(timezone.utc),
                 context={"url": self.url}

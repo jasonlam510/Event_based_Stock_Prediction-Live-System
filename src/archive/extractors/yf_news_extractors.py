@@ -15,6 +15,7 @@ class YahooFinanceExtractor(ContentExtractor):
     """Extractor for Yahoo Finance article content."""
     
     def __init__(self):
+        self.healess=True
         # Set headers exactly as they appear in the browser request
         self.headers = {
             'authority': 'finance.yahoo.com',
@@ -115,7 +116,7 @@ class YahooFinanceExtractor(ContentExtractor):
             p = await async_playwright().start()
             # Launch browser with specific options
             browser = await p.chromium.launch(
-                headless=True
+                headless=self.healess
             )
             
             # Load existing cookies

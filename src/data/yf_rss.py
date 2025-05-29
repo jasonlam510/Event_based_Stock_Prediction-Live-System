@@ -14,7 +14,7 @@ import random
 from src.parsers.yf_rss_parsers import YahooFinanceParser
 from src.data.models import Channel, NewsItem
 from src.llm.gemini_news_analyzer import analyze_news
-from src.extractors.yf_news_extractors import YahooFinanceExtractor
+from archive.extractors.yf_news_extractors import YahooFinanceExtractor
 
 class YahooFinanceRSS(Data):
     def __init__(self, url: str = "https://finance.yahoo.com/rss/"):

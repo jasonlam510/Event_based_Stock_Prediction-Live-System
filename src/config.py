@@ -15,7 +15,7 @@ class Config:
             env (str, optional): Environment to load ('test' or 'prod'). 
                                If None, uses ENVIRONMENT variable or defaults to 'prod'
         """
-        self.env = env or os.getenv('ENVIRONMENT', 'prod')
+        self.env = env or os.getenv('ENVIRONMENT', 'test')
         logger.info("Initializing Config with environment: %s", self.env)
         self._load_env()
         
@@ -30,15 +30,16 @@ class Config:
         else:
             env_file = project_root / '.env'
             
-        logger.info("Loading environment from file: %s", env_file)
         
         # Load the environment variables
         if env_file.exists():
-            load_dotenv(env_file)
-            logger.info("Environment file loaded successfully")
+            # Set override=False to preserve existing environment variables
+            load_dotenv(env_file, override=True)
+            logger.info("Environment file loaded successfully (existing variables preserved)")
         else:
             error_msg = f"Environment file not found: {env_file}"
             logger.error(error_msg)
+            logger.error("Current working directory: %s", os.getcwd())
             raise FileNotFoundError(error_msg)
     
     def get_key(self, key_name: str) -> str:

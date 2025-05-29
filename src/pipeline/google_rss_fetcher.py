@@ -5,7 +5,7 @@ import aiohttp
 import random
 from src.pipeline.worker import PipelineWorker
 from src.pipeline.queues import GoogleNewsRSSItem, PipelineError
-from src.parsers.google_news_parsers import GoogleNewsParser
+from parsers.google_rss_parsers import GoogleNewsParser
 from src.database import Database
 
 class GoogleNewsFetcher(PipelineWorker):

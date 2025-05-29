@@ -3,14 +3,11 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select
-from sqlalchemy import update
 from sqlalchemy.ext.declarative import declarative_base
 from src.config import Config
 from src.utils.logger import get_logger
-from src.pipeline.queues import RSSItem as QueueRSSItem
-from src.pipeline.queues import ExtractedContent as QueueExtractedContent
-from src.pipeline.queues import AnalysisResult as QueueAnalysisResult
-from src.data.models import Base, RSSItem, ExtractedContent, AnalysisResult
+from src.pipeline.queues import YFRSSItem, GoogleNewsRSSItem, AnalysisResult as QueueAnalysisResult
+from src.data.models import Base, YFRSSItem as DBYFRSSItem, GoogleNewsRSSItem as DBGoogleNewsRSSItem, AnalysisResult
 
 logger = get_logger(__name__) 
 config = Config()
@@ -106,16 +103,16 @@ class Database:
             await self.engine.dispose()
             logger.info("Database connection closed")
             
-    async def store_rss_item(self, item: QueueRSSItem) -> bool:
-        """Store RSS item in database"""
+    async def store_yf_rss_item(self, item: YFRSSItem) -> bool:
+        """Store Yahoo Finance RSS item in database"""
         try:
             async with self.async_session() as session:
-                # Convert QueueRSSItem to SQLAlchemy RSSItem
-                db_item = RSSItem(
+                # Convert YFRSSItem to SQLAlchemy YFRSSItem
+                db_item = DBYFRSSItem(
                     guid=item.guid,
+                    pub_date=item.pub_date,
                     title=item.title,
                     link=str(item.link),
-                    pub_date=item.pub_date,
                     source_name=item.source_name,
                     source_url=str(item.source_url) if item.source_url else None,
                     media_url=str(item.media_url) if item.media_url else None,
@@ -124,59 +121,73 @@ class Database:
                 )
                 
                 # Merge will insert or update
-                session.add(db_item)
+                await session.merge(db_item)
                 await session.commit()
                 return True
                 
         except Exception as e:
-            logger.error(f"Error storing RSS item {item.guid}: {e}")
+            logger.error(f"Error storing Yahoo Finance RSS item {item.guid}: {e}")
             return False
             
-    async def store_extracted_content(self, content: QueueExtractedContent) -> bool:
-        """Store extracted content in database"""
+    async def store_google_news_rss_item(self, item: GoogleNewsRSSItem) -> bool:
+        """Store Google News RSS item in database"""
         try:
             async with self.async_session() as session:
-                # First get the RSS item to get its pub_date
-                # Get the most recent RSS item if there are duplicates
-                query = select(RSSItem).where(
-                    RSSItem.guid == content.guid
-                ).order_by(
-                    RSSItem.pub_date.desc()
-                ).limit(1)
-                
-                result = await session.execute(query)
-                rss_item = result.scalar_one_or_none()
-                
-                if not rss_item:
-                    logger.error(f"RSS item {content.guid} not found")
-                    return False
-                
-                # Convert QueueExtractedContent to SQLAlchemy ExtractedContent
-                db_content = ExtractedContent(
-                    guid=content.guid,
-                    pub_date=rss_item.pub_date,  # Add pub_date from RSS item
-                    url=str(content.url),
-                    content=content.content,
-                    extraction_timestamp=content.extraction_timestamp,
-                    content_metadata=content.metadata
+                # Convert GoogleNewsRSSItem to SQLAlchemy GoogleNewsRSSItem
+                db_item = DBGoogleNewsRSSItem(
+                    guid=item.guid,
+                    pub_date=item.pub_date,
+                    title=item.title,
+                    link=str(item.link),
+                    source_name=item.source_name,
+                    source_url=str(item.source_url) if item.source_url else None,
+                    description=item.description,
+                    is_perma_link=item.is_perma_link
                 )
                 
-                # Use merge instead of add to handle potential duplicates
-                session.merge(db_content)
+                # Merge will insert or update
+                await session.merge(db_item)
                 await session.commit()
                 return True
                 
         except Exception as e:
-            logger.error(f"Error storing extracted content {content.guid}: {e}")
+            logger.error(f"Error storing Google News RSS item {item.guid}: {e}")
             return False
             
     async def store_analysis_result(self, result: QueueAnalysisResult) -> bool:
         """Store analysis result in database"""
         try:
             async with self.async_session() as session:
+                # Get the RSS item to get its pub_date
+                # Try Yahoo Finance first
+                query = select(DBYFRSSItem).where(
+                    DBYFRSSItem.guid == result.guid
+                ).order_by(
+                    DBYFRSSItem.pub_date.desc()
+                ).limit(1)
+                
+                rss_result = await session.execute(query)
+                rss_item = rss_result.scalar_one_or_none()
+                
+                # If not found in Yahoo Finance, try Google News
+                if not rss_item:
+                    query = select(DBGoogleNewsRSSItem).where(
+                        DBGoogleNewsRSSItem.guid == result.guid
+                    ).order_by(
+                        DBGoogleNewsRSSItem.pub_date.desc()
+                    ).limit(1)
+                    
+                    rss_result = await session.execute(query)
+                    rss_item = rss_result.scalar_one_or_none()
+                
+                if not rss_item:
+                    logger.error(f"RSS item {result.guid} not found in any source")
+                    return False
+                
                 # Convert QueueAnalysisResult to SQLAlchemy AnalysisResult
                 db_result = AnalysisResult(
                     guid=result.guid,
+                    pub_date=rss_item.pub_date,  # Use pub_date from RSS item
                     sentiment_score=result.sentiment_score,
                     relevance_score=result.relevance_score,
                     event_importance=result.event_importance,
@@ -186,7 +197,7 @@ class Database:
                     content_metadata=result.metadata
                 )
                 
-                session.add(db_result)
+                await session.merge(db_result)
                 await session.commit()
                 return True
                 
@@ -200,9 +211,7 @@ class Database:
             async with self.async_session() as session:
                 # Query with joins
                 query = select(
-                    RSSItem, ExtractedContent, AnalysisResult
-                ).join(
-                    ExtractedContent
+                    DBYFRSSItem, AnalysisResult
                 ).join(
                     AnalysisResult
                 ).order_by(
@@ -214,11 +223,10 @@ class Database:
                 
                 # Convert to dict
                 return [{
-                    "guid": row.RSSItem.guid,
-                    "title": row.RSSItem.title,
-                    "link": row.RSSItem.link,
-                    "pub_date": row.RSSItem.pub_date,
-                    "content": row.ExtractedContent.content,
+                    "guid": row.DBYFRSSItem.guid,
+                    "title": row.DBYFRSSItem.title,
+                    "link": row.DBYFRSSItem.link,
+                    "pub_date": row.DBYFRSSItem.pub_date,
                     "sentiment_score": row.AnalysisResult.sentiment_score,
                     "relevance_score": row.AnalysisResult.relevance_score,
                     "event_importance": row.AnalysisResult.event_importance,
@@ -231,91 +239,58 @@ class Database:
             logger.error(f"Error fetching latest analysis: {e}")
             return []
 
-    async def get_latest_pub_date(self) -> Optional[datetime]:
-        """Get the latest publication date from RSS items table
-        
-        Returns:
-            Optional[datetime]: The latest publication date if table has data, None if table is empty
-        """
+    async def get_latest_yf_pub_date(self) -> Optional[datetime]:
+        """Get the latest publication date from Yahoo Finance RSS items table"""
         try:
             async with self.async_session() as session:
                 # Query to get the latest pub_date
-                query = select(RSSItem.pub_date).order_by(RSSItem.pub_date.desc()).limit(1)
+                query = select(DBYFRSSItem.pub_date).order_by(DBYFRSSItem.pub_date.desc()).limit(1)
                 result = await session.execute(query)
                 latest_date = result.scalar_one_or_none()
                 
                 if latest_date:
-                    logger.info(f"Latest publication date found: {latest_date}")
+                    logger.info(f"Latest Yahoo Finance publication date found: {latest_date}")
                     return latest_date
                 else:
-                    logger.info("No RSS items found in database")
+                    logger.info("No Yahoo Finance RSS items found in database")
                     return None
                     
         except Exception as e:
-            logger.error(f"Error getting latest publication date: {e}")
+            logger.error(f"Error getting latest Yahoo Finance publication date: {e}")
             return None
 
-    async def get_unprocessed_rss_items(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get RSS items that don't have corresponding extracted content
-        
-        Args:
-            limit (int): Maximum number of items to return
-            
-        Returns:
-            List[Dict[str, Any]]: List of RSS items that need processing
-        """
+    async def get_latest_google_news_pub_date(self) -> Optional[datetime]:
+        """Get the latest publication date from Google News RSS items table"""
         try:
             async with self.async_session() as session:
-                # Query to find RSS items without extracted content
-                query = select(RSSItem).outerjoin(
-                    ExtractedContent,
-                    (RSSItem.guid == ExtractedContent.guid) & 
-                    (RSSItem.pub_date == ExtractedContent.pub_date)
-                ).where(
-                    ExtractedContent.guid.is_(None)
-                ).order_by(
-                    RSSItem.pub_date.desc()
-                ).limit(limit)
-                
+                # Query to get the latest pub_date
+                query = select(DBGoogleNewsRSSItem.pub_date).order_by(DBGoogleNewsRSSItem.pub_date.desc()).limit(1)
                 result = await session.execute(query)
-                items = result.scalars().all()
+                latest_date = result.scalar_one_or_none()
                 
-                # Convert to dict format
-                return [{
-                    "guid": item.guid,
-                    "title": item.title,
-                    "link": item.link,
-                    "pub_date": item.pub_date,
-                    "source_name": item.source_name,
-                    "source_url": item.source_url,
-                    "media_url": item.media_url,
-                    "media_height": item.media_height,
-                    "media_width": item.media_width
-                } for item in items]
-                
+                if latest_date:
+                    logger.info(f"Latest Google News publication date found: {latest_date}")
+                    return latest_date
+                else:
+                    logger.info("No Google News RSS items found in database")
+                    return None
+                    
         except Exception as e:
-            logger.error(f"Error getting unprocessed RSS items: {e}")
-            return []
+            logger.error(f"Error getting latest Google News publication date: {e}")
+            return None
 
-    async def get_unanalyzed_rss_items(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get RSS items that don't have corresponding analysis results
-        
-        Args:
-            limit (int): Maximum number of items to return
-            
-        Returns:
-            List[Dict[str, Any]]: List of RSS items that need analysis
-        """
+    async def get_unanalyzed_yf_rss_items(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get Yahoo Finance RSS items that don't have corresponding analysis results"""
         try:
             async with self.async_session() as session:
                 # Query to find RSS items without analysis results
-                query = select(RSSItem).outerjoin(
+                query = select(DBYFRSSItem).outerjoin(
                     AnalysisResult,
-                    RSSItem.guid == AnalysisResult.guid
+                    DBYFRSSItem.guid == AnalysisResult.guid
                 ).where(
                     AnalysisResult.guid.is_(None)
                 ).order_by(
-                    RSSItem.pub_date.desc()
+                    DBYFRSSItem.pub_date.desc()
                 ).limit(limit)
                 
                 result = await session.execute(query)
@@ -335,5 +310,38 @@ class Database:
                 } for item in items]
                 
         except Exception as e:
-            logger.error(f"Error getting unanalyzed RSS items: {e}")
+            logger.error(f"Error getting unanalyzed Yahoo Finance RSS items: {e}")
+            return []
+
+    async def get_unanalyzed_google_news_rss_items(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get Google News RSS items that don't have corresponding analysis results"""
+        try:
+            async with self.async_session() as session:
+                # Query to find RSS items without analysis results
+                query = select(DBGoogleNewsRSSItem).outerjoin(
+                    AnalysisResult,
+                    DBGoogleNewsRSSItem.guid == AnalysisResult.guid
+                ).where(
+                    AnalysisResult.guid.is_(None)
+                ).order_by(
+                    DBGoogleNewsRSSItem.pub_date.desc()
+                ).limit(limit)
+                
+                result = await session.execute(query)
+                items = result.scalars().all()
+                
+                # Convert to dict format
+                return [{
+                    "guid": item.guid,
+                    "title": item.title,
+                    "link": item.link,
+                    "pub_date": item.pub_date,
+                    "source_name": item.source_name,
+                    "source_url": item.source_url,
+                    "description": item.description,
+                    "is_perma_link": item.is_perma_link
+                } for item in items]
+                
+        except Exception as e:
+            logger.error(f"Error getting unanalyzed Google News RSS items: {e}")
             return [] 

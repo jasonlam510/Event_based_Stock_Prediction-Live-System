@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from src.pipeline.worker import PipelineWorker
-from src.pipeline.queues import RSSItem, PipelineError
+from src.pipeline.queues import YFRSSItem, GoogleNewsRSSItem, PipelineError
 from src.database import Database
 from src.utils.logger import get_logger
 
@@ -24,7 +24,7 @@ class ContentBackfillWorker(PipelineWorker):
         self.check_interval = check_interval
         self.batch_size = batch_size
         
-    async def get_next_item(self) -> Optional[List[RSSItem]]:
+    async def get_next_item(self) -> Optional[List[Any]]:
         """Wait for next check interval"""
         if not hasattr(self, '_first_run'):
             self._first_run = False
@@ -33,25 +33,28 @@ class ContentBackfillWorker(PipelineWorker):
         await asyncio.sleep(self.check_interval)
         return []  # Empty list triggers a new check
         
-    async def put_result(self, items: List[RSSItem]):
+    async def put_result(self, items: List[Any]):
         """Put items in output queue"""
         for item in items:
             await self.output_queue.put(item)
             
-    async def process(self, _: List[RSSItem]) -> List[RSSItem]:
-        """Check for and process unanalyzed RSS items"""
+    async def process(self, _: List[Any]) -> List[Any]:
+        """Check for and process unanalyzed RSS items from both sources"""
         try:
-            # Get unanalyzed RSS items
-            unanalyzed_items = await self.db.get_unanalyzed_rss_items(limit=self.batch_size)
+            # Get unanalyzed items from both sources
+            yf_items = await self.db.get_unanalyzed_yf_rss_items(limit=self.batch_size)
+            google_news_items = await self.db.get_unanalyzed_google_news_rss_items(limit=self.batch_size)
             
-            if not unanalyzed_items:
+            if not yf_items and not google_news_items:
                 self.logger.info("No unanalyzed RSS items found")
                 return []
                 
             # Convert to RSSItem objects
             rss_items = []
-            for item in unanalyzed_items:
-                rss_item = RSSItem(
+            
+            # Process Yahoo Finance items
+            for item in yf_items:
+                rss_item = YFRSSItem(
                     title=item["title"],
                     link=item["link"],
                     pub_date=item["pub_date"],
@@ -64,7 +67,21 @@ class ContentBackfillWorker(PipelineWorker):
                 )
                 rss_items.append(rss_item)
                 
-            self.logger.info(f"Found {len(rss_items)} unanalyzed RSS items")
+            # Process Google News items
+            for item in google_news_items:
+                rss_item = GoogleNewsRSSItem(
+                    title=item["title"],
+                    link=item["link"],
+                    pub_date=item["pub_date"],
+                    guid=item["guid"],
+                    source_name=item["source_name"],
+                    source_url=item["source_url"],
+                    description=item["description"],
+                    is_perma_link=item["is_perma_link"]
+                )
+                rss_items.append(rss_item)
+                
+            self.logger.info(f"Found {len(rss_items)} unanalyzed RSS items ({len(yf_items)} from Yahoo Finance, {len(google_news_items)} from Google News)")
             return rss_items
             
         except Exception as e:
@@ -72,7 +89,11 @@ class ContentBackfillWorker(PipelineWorker):
                 guid="content_backfill",
                 stage="content_backfill",
                 error=str(e),
-                timestamp=datetime.now(timezone.utc)
+                timestamp=datetime.now(timezone.utc),
+                context={
+                    "batch_size": self.batch_size,
+                    "check_interval": self.check_interval
+                }
             )
             await self.error_queue.put(error)
             raise 

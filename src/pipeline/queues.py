@@ -1,20 +1,33 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from pydantic import HttpUrl
 
 @dataclass
-class RSSItem:
-    """Raw RSS feed item from Yahoo Finance"""
+class BaseRSSItem:
+    """Base class for RSS feed items"""
     title: str
     link: HttpUrl
     pub_date: datetime
     guid: str
     source_name: Optional[str] = None
     source_url: Optional[HttpUrl] = None
+
+@dataclass
+class YFRSSItem(BaseRSSItem):
+    """Yahoo Finance RSS feed item"""
     media_url: Optional[HttpUrl] = None
     media_height: Optional[int] = None
     media_width: Optional[int] = None
+
+@dataclass
+class GoogleNewsRSSItem(BaseRSSItem):
+    """Google News RSS feed item"""
+    description: Optional[str] = None
+    is_perma_link: bool = False
+
+# Union type for all RSS item types
+RSSItem = Union[YFRSSItem, GoogleNewsRSSItem]
 
 @dataclass
 class AnalysisResult:

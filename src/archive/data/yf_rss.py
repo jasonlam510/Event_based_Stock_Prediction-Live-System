@@ -4,7 +4,7 @@ if __name__ == "__main__":
     project_root = Path.cwd()  # Get the current directory
     sys.path.append(str(project_root))
 from src.utils.logger import get_logger
-from src.data.base_data import Data
+from archive.data.base_data import Data
 import aiohttp
 import asyncio
 import pandas as pd

@@ -50,17 +50,14 @@ class LLMAnalyzer(PipelineWorker):
         try:
             # Analyze title
             analysis = await analyze_news(
-                content=item.title,  # Use title instead of content
+                content=item.title,
                 content_name="title",
                 stock_name=self.stock_name,
                 model=self.model
             )
             
-            # Create metadata
+            # Create metadata with only pub_date
             metadata: Dict[str, Any] = {
-                "source_name": item.source_name,
-                "source_url": str(item.source_url) if item.source_url else None,
-                "media_url": str(item.media_url) if item.media_url else None,
                 "pub_date": item.pub_date.isoformat()
             }
             
@@ -72,7 +69,7 @@ class LLMAnalyzer(PipelineWorker):
                 event_importance=analysis.event_importance,
                 event_type=analysis.event_type,
                 analysis_timestamp=datetime.now(timezone.utc),
-                raw_content=item.title,  # Store title as raw content
+                raw_content=item.title,
                 metadata=metadata
             )
             
@@ -86,7 +83,6 @@ class LLMAnalyzer(PipelineWorker):
                 error=str(e),
                 timestamp=datetime.now(timezone.utc),
                 context={
-                    "url": str(item.link),
                     "title_length": len(item.title)
                 }
             )

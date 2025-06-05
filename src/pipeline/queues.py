@@ -4,6 +4,13 @@ from typing import Optional, Dict, Any, Union
 from pydantic import HttpUrl
 
 @dataclass
+class RSSItem:
+    """Simplified RSS feed item for LLM analysis"""
+    guid: str
+    pub_date: datetime
+    title: str
+
+@dataclass
 class BaseRSSItem:
     """Base class for RSS feed items"""
     title: str
@@ -39,7 +46,7 @@ class AnalysisResult:
     event_type: str
     analysis_timestamp: datetime
     raw_content: str  # The RSS item title that was analyzed
-    metadata: Dict[str, Any]  # Contains source_name, source_url, media_url, and pub_date
+    metadata: Dict[str, Any]  # Contains pub_date
 
 @dataclass
 class PipelineError:

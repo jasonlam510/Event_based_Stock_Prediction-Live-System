@@ -2,9 +2,9 @@ import asyncio
 from typing import List, Optional, Dict
 from datetime import datetime, timezone
 from src.pipeline.worker import PipelineWorker
-from pipeline.yf_rss_fetcher import YF_RSSFetcher
-from src.pipeline.llm_analyzer import LLMAnalyzer
-from src.pipeline.content_backfill_worker import ContentBackfillWorker
+from src.pipeline.fetchers.yf_rss_fetcher import YF_RSSFetcher
+from src.pipeline.analyzers.llm_analyzer import LLMAnalyzer
+from src.pipeline.workers.content_backfill_worker import ContentBackfillWorker
 from src.pipeline.queues import AnalysisResult, PipelineError, RSSItem
 from src.database import Database
 from src.utils.logger import get_logger

@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from src.config import Config
 from src.utils.logger import get_logger
 from src.pipeline.queues import YFRSSItem, GoogleNewsRSSItem, AnalysisResult as QueueAnalysisResult
-from src.data.models import Base, YFRSSItem as DBYFRSSItem, GoogleNewsRSSItem as DBGoogleNewsRSSItem, AnalysisResult
+from pipeline.models import Base, YFRSSItem as DBYFRSSItem, GoogleNewsRSSItem as DBGoogleNewsRSSItem, AnalysisResult
 
 logger = get_logger(__name__) 
 config = Config()
@@ -103,10 +103,38 @@ class Database:
             await self.engine.dispose()
             logger.info("Database connection closed")
             
-    async def store_yf_rss_item(self, item: YFRSSItem) -> bool:
-        """Store Yahoo Finance RSS item in database"""
+    async def store_yf_rss_item(self, item: YFRSSItem) -> Optional[YFRSSItem]:
+        """Store Yahoo Finance RSS item in database
+        
+        This function handles deduplication of RSS items using the following strategy:
+        1. Uses the item's guid and pub_date as composite primary key for deduplication
+        2. If an item with the same guid and pub_date exists and content is unchanged:
+           - Returns None to indicate no update needed
+        3. If an item with the same guid and pub_date exists but content is different:
+           - Updates the existing record with new data
+           - Returns the item to indicate it was updated
+        4. If the item is new:
+           - Inserts a new record
+           - Returns the item to indicate it was inserted
+        5. If there's an error:
+           - Returns None to indicate failure
+           
+        This approach ensures that:
+        - Each unique RSS item (based on guid and pub_date) is stored only once
+        - Only new or updated content triggers a return value
+        - Duplicate items with no changes are filtered out
+        
+        Args:
+            item (YFRSSItem): The RSS item to store
+            
+        Returns:
+            Optional[YFRSSItem]: The stored item if it was new or updated, None if duplicate or failed
+        """
         try:
             async with self.async_session() as session:
+                # Check if item exists and get its current state using both guid and pub_date
+                existing_item = await session.get(DBYFRSSItem, (item.guid, item.pub_date))
+                
                 # Convert YFRSSItem to SQLAlchemy YFRSSItem
                 db_item = DBYFRSSItem(
                     guid=item.guid,
@@ -120,14 +148,31 @@ class Database:
                     media_width=item.media_width
                 )
                 
-                # Merge will insert or update
+                # If item exists and content is the same, return None
+                if existing_item and self._items_equal(existing_item, db_item):
+                    return None
+                    
+                # Otherwise, merge and return the item
                 await session.merge(db_item)
                 await session.commit()
-                return True
+                return item
                 
         except Exception as e:
             logger.error(f"Error storing Yahoo Finance RSS item {item.guid}: {e}")
-            return False
+            return None
+            
+    def _items_equal(self, existing: DBYFRSSItem, new: DBYFRSSItem) -> bool:
+        """Compare two RSS items to check if they are identical"""
+        return (
+            existing.title == new.title and
+            existing.link == new.link and
+            existing.pub_date == new.pub_date and
+            existing.source_name == new.source_name and
+            existing.source_url == new.source_url and
+            existing.media_url == new.media_url and
+            existing.media_height == new.media_height and
+            existing.media_width == new.media_width
+        )
             
     async def store_google_news_rss_item(self, item: GoogleNewsRSSItem) -> bool:
         """Store Google News RSS item in database"""

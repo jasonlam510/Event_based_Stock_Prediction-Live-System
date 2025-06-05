@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Optional
 import random
 from src.parsers.yf_rss_parsers import YahooFinanceParser
-from src.data.models import Channel, NewsItem
+from pipeline.models import Channel, NewsItem
 from src.llm.gemini_news_analyzer import analyze_news
 from archive.extractors.yf_news_extractors import YahooFinanceExtractor
 

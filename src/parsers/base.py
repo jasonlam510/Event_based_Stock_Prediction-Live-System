@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple
-from src.data.models import Channel, NewsItem
+from src.pipeline.models import Channel, NewsItem
 
 class RSSParser(ABC):
     """Abstract base class for RSS feed parsers."""

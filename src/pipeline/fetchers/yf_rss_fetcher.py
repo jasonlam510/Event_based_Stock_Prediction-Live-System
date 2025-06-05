@@ -66,16 +66,29 @@ class YF_RSSFetcher(PipelineWorker):
         return []  # Empty list triggers a new fetch
         
     async def put_result(self, items: List[YFRSSItem]):
-        """Put fetched items in output queue and store in database"""
+        """Put fetched items in output queue and store in database
+        
+        This method implements a two-step process for handling RSS items:
+        1. First attempts to store each item in the database
+        2. Only queues items that were successfully stored (new or updated)
+        
+        The deduplication logic works as follows:
+        - The database layer handles deduplication using the item's guid
+        - Only successfully stored items (new or updated) are returned by the database
+        - Only these returned items are put into the output queue
+        
+        Args:
+            items (List[YFRSSItem]): List of RSS items to process
+        """
+        successful_items = 0
         for item in items:
-            # Store in database
-            success = await self.db.store_yf_rss_item(item)  # Updated method name
-            if not success:
-                self.logger.error(f"Failed to store Yahoo Finance RSS item {item.guid} in database")
-                continue
+            # Store in database and get the stored item
+            stored_item = await self.db.store_yf_rss_item(item)
+            if stored_item:  # Only queue if the item was stored (new or updated)
+                await self.output_queue.put(stored_item)
+                successful_items += 1
                 
-            # Put in output queue
-            await self.output_queue.put(item)
+        self.logger.info(f"Queued {successful_items} new or updated items out of {len(items)} total items")
             
     async def _fetch_with_retry(self) -> Optional[str]:
         """Fetch data with exponential backoff retry logic"""
@@ -130,9 +143,6 @@ class YF_RSSFetcher(PipelineWorker):
     async def process(self, _: List[YFRSSItem]) -> List[YFRSSItem]:
         """Fetch and parse RSS feed"""
         try:
-            # Get latest processed publication date
-            latest_pub_date = await self.db.get_latest_yf_pub_date()  # Updated method name
-            
             # Fetch RSS feed with retry logic
             content = await self._fetch_with_retry()
             if not content:
@@ -144,16 +154,11 @@ class YF_RSSFetcher(PipelineWorker):
                 self.logger.warning("No items found in RSS feed")
                 return []
                 
-            # Convert to YFRSSItems and filter out already processed items
+            # Convert to YFRSSItems
             rss_items = []
             for item in items:
                 # Ensure datetime is timezone aware
                 pub_date = self._ensure_timezone_aware(item.pub_date)
-                
-                # Skip if item is older than latest processed date
-                if latest_pub_date and pub_date <= latest_pub_date:
-                    self.logger.debug(f"Skipping already processed item: {item.guid} (pub_date: {pub_date})")
-                    continue
                 
                 rss_item = YFRSSItem(
                     title=item.title,
@@ -168,13 +173,13 @@ class YF_RSSFetcher(PipelineWorker):
                 )
                 rss_items.append(rss_item)
                 
-            self.logger.info(f"Fetched {len(rss_items)} new items")
+            self.logger.info(f"Fetched {len(rss_items)} items")
             return rss_items
             
         except Exception as e:
             error = PipelineError(
                 guid="rss_fetch",
-                stage="yf_rss_fetcher",  # Updated stage name
+                stage="yf_rss_fetcher",
                 error=str(e),
                 timestamp=datetime.now(timezone.utc),
                 context={"url": self.url}

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import List, Tuple, Optional
 from src.parsers.base import RSSParser
-from src.data.models import Channel, NewsItem
+from pipeline.models import Channel, NewsItem
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

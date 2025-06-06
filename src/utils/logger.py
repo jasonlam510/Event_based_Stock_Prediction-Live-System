@@ -31,7 +31,7 @@ class CustomFormatter(logging.Formatter):
 def setup_logger(
     name: str,
     level: int,
-    log_file: Optional[Path] = None,
+    log_file: Optional[Path] = 'None',
     console_output: bool = True
 ) -> logging.Logger:
     """Set up and configure a logger.
@@ -83,7 +83,7 @@ def setup_logger(
 def get_logger(
     name: str,
     level: Optional[int] = None,
-    log_dir: Optional[Path] = None
+    log_dir: Optional[Path] = './logs'
 ) -> logging.Logger:
     """Get a configured logger instance.
     

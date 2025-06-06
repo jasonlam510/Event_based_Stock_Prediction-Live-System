@@ -1,7 +1,7 @@
 from pydantic import BaseModel, HttpUrl, Field
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, JSON, text, PrimaryKeyConstraint, ForeignKeyConstraint, Boolean
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, JSON, text, PrimaryKeyConstraint, ForeignKeyConstraint, Boolean, BigInteger, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -86,4 +86,75 @@ class AnalysisResult(Base):
     # Define composite primary key
     __table_args__ = (
         PrimaryKeyConstraint('guid', 'pub_date', name='analysis_results_pkey'),
+    )
+
+class StockData(Base):
+    """Stock price data from Yahoo Finance"""
+    __tablename__ = "stock_data"
+    
+    symbol = Column(String, nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False)
+    open = Column(Float, nullable=False)
+    high = Column(Float, nullable=False)
+    low = Column(Float, nullable=False)
+    close = Column(Float, nullable=False)
+    volume = Column(BigInteger, nullable=False)
+    
+    # Define composite primary key
+    __table_args__ = (
+        PrimaryKeyConstraint('symbol', 'date', name='stock_data_pkey'),
+    )
+
+class TechnicalIndicators(Base):
+    """Technical indicators for stock data"""
+    __tablename__ = "technical_indicators"
+    
+    symbol = Column(String, nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False)
+    
+    # Bollinger Bands (20)
+    bb_upper_20 = Column(Float)  # Bollinger Bands Upper
+    bb_middle_20 = Column(Float) # Bollinger Bands Middle
+    bb_lower_20 = Column(Float)  # Bollinger Bands Lower
+    
+    # Moving Averages
+    ma_50 = Column(Float)     # Simple Moving Average 50
+    ema_12 = Column(Float)    # Exponential Moving Average 12
+    
+    # Momentum Indicators
+    rsi_14 = Column(Float)    # Relative Strength Index 14
+    macd_26 = Column(Float)      # MACD
+    macd_signal_26 = Column(Float)  # MACD Signal Line
+    macd_hist_26 = Column(Float)    # MACD Histogram
+    
+    # Volatility Indicators
+    atr_14 = Column(Float)    # Average True Range 14
+    cci_20 = Column(Float)    # Commodity Channel Index 20
+    
+    # Stochastic Oscillator (14)
+    stoch_k_14 = Column(Float)   # Stochastic %K
+    stoch_d_14 = Column(Float)   # Stochastic %D
+    
+    # ADX (14)
+    adx_14 = Column(Float)       # Average Directional Index
+    di_pos_14 = Column(Float)    # Positive Directional Indicator
+    di_neg_14 = Column(Float)    # Negative Directional Indicator
+    
+    # Vortex (14)
+    vortex_pos_14 = Column(Float)  # Positive Vortex
+    vortex_neg_14 = Column(Float)  # Negative Vortex
+    
+    # Volume Indicators
+    obv = Column(Float)       # On-Balance Volume
+    mfi_14 = Column(Float)    # Money Flow Index 14
+    vwap = Column(Float)      # Volume-Weighted Average Price
+    
+    # Define composite primary key and foreign key
+    __table_args__ = (
+        PrimaryKeyConstraint('symbol', 'date', name='technical_indicators_pkey'),
+        ForeignKeyConstraint(
+            ['symbol', 'date'],
+            ['stock_data.symbol', 'stock_data.date'],
+            name='fk_technical_indicators_stock_data'
+        ),
     ) 

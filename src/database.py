@@ -7,7 +7,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from src.config import Config
 from src.utils.logger import get_logger
 from src.pipeline.queues import YFRSSItem, GoogleNewsRSSItem, AnalysisResult as QueueAnalysisResult
-from pipeline.models import Base, YFRSSItem as DBYFRSSItem, GoogleNewsRSSItem as DBGoogleNewsRSSItem, AnalysisResult
+from pipeline.models import Base, YFRSSItem as DBYFRSSItem, GoogleNewsRSSItem as DBGoogleNewsRSSItem, AnalysisResult, StockData, TechnicalIndicators
+import pandas as pd
 
 logger = get_logger(__name__) 
 config = Config()
@@ -385,4 +386,292 @@ class Database:
                 
         except Exception as e:
             logger.error(f"Error getting unanalyzed Google News RSS items: {e}")
-            return [] 
+            return []
+
+    async def store_stock_data(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """Store stock data in database
+        
+        This function handles deduplication of stock data using the following strategy:
+        1. Uses symbol and date as composite primary key for deduplication
+        2. If data for the same symbol and date exists and content is unchanged:
+           - Returns None to indicate no update needed
+        3. If data for the same symbol and date exists but content is different:
+           - Updates the existing record with new data
+           - Returns the updated data
+        4. If the data is new:
+           - Inserts a new record
+           - Returns the new data
+        5. If there's an error:
+           - Returns None to indicate failure
+           
+        This approach ensures that:
+        - Each unique stock data point (based on symbol and date) is stored only once
+        - Only new or updated data triggers a return value
+        - Duplicate data points with no changes are filtered out
+        
+        Args:
+            df (pd.DataFrame): DataFrame containing stock data with columns:
+                - symbol: Stock symbol
+                - date: Date of the data point
+                - open: Opening price
+                - high: Highest price
+                - low: Lowest price
+                - close: Closing price
+                - volume: Trading volume
+                
+        Returns:
+            Optional[pd.DataFrame]: DataFrame containing only new or updated data points, None if no updates or error
+        """
+        try:
+            async with self.async_session() as session:
+                new_or_updated_data = []
+                
+                for _, row in df.iterrows():
+                    # Check if data exists
+                    query = select(StockData).where(
+                        StockData.symbol == row['symbol'],
+                        StockData.date == row['date']
+                    )
+                    result = await session.execute(query)
+                    existing_data = result.scalar_one_or_none()
+                    
+                    # Create new StockData object
+                    new_data = StockData(
+                        symbol=row['symbol'],
+                        date=row['date'],
+                        open=row['open'],
+                        high=row['high'],
+                        low=row['low'],
+                        close=row['close'],
+                        volume=row['volume']
+                    )
+                    
+                    # If data exists and is different, or if it's new
+                    if not existing_data or not self._stock_data_equal(existing_data, new_data):
+                        # Merge will insert or update
+                        await session.merge(new_data)
+                        new_or_updated_data.append(row)
+                
+                if new_or_updated_data:
+                    await session.commit()
+                    return pd.DataFrame(new_or_updated_data)
+                else:
+                    return None
+                
+        except Exception as e:
+            logger.error(f"Error storing stock data: {e}")
+            return None
+            
+    def _stock_data_equal(self, existing: StockData, new: StockData) -> bool:
+        """Compare two stock data points to check if they are identical"""
+        return (
+            existing.open == new.open and
+            existing.high == new.high and
+            existing.low == new.low and
+            existing.close == new.close and
+            existing.volume == new.volume
+        )
+            
+    async def get_stock_data(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime
+    ) -> Optional[pd.DataFrame]:
+        """Get stock data for a symbol within a date range
+        
+        Args:
+            symbol (str): Stock symbol
+            start_date (datetime): Start date
+            end_date (datetime): End date
+            
+        Returns:
+            Optional[pd.DataFrame]: DataFrame containing stock data or None if error
+        """
+        try:
+            async with self.async_session() as session:
+                # Query stock data
+                query = select(StockData).where(
+                    StockData.symbol == symbol,
+                    StockData.date >= start_date,
+                    StockData.date <= end_date
+                ).order_by(StockData.date)
+                
+                result = await session.execute(query)
+                rows = result.scalars().all()
+                
+                if not rows:
+                    return None
+                    
+                # Convert to DataFrame
+                data = [{
+                    'symbol': row.symbol,
+                    'date': row.date,
+                    'open': row.open,
+                    'high': row.high,
+                    'low': row.low,
+                    'close': row.close,
+                    'volume': row.volume
+                } for row in rows]
+                
+                return pd.DataFrame(data)
+                
+        except Exception as e:
+            logger.error(f"Error getting stock data: {e}")
+            return None
+            
+    async def get_stock_data_without_indicators(self, symbol: str, limit: int = 100) -> Optional[pd.DataFrame]:
+        """Get stock data records that don't have technical indicators calculated
+        
+        Args:
+            symbol (str): Stock symbol to get data for
+            limit (int): Maximum number of records to return
+            
+        Returns:
+            Optional[pd.DataFrame]: DataFrame containing stock data or None if error
+        """
+        try:
+            async with self.async_session() as session:
+                # Query stock data that doesn't have corresponding technical indicators
+                query = select(StockData).outerjoin(
+                    TechnicalIndicators,
+                    (StockData.symbol == TechnicalIndicators.symbol) &
+                    (StockData.date == TechnicalIndicators.date)
+                ).where(
+                    StockData.symbol == symbol,
+                    TechnicalIndicators.symbol.is_(None)
+                ).order_by(
+                    StockData.date.desc()
+                ).limit(limit)
+                
+                result = await session.execute(query)
+                rows = result.scalars().all()
+                
+                if not rows:
+                    return None
+                    
+                # Convert to DataFrame
+                data = [{
+                    'symbol': row.symbol,
+                    'date': row.date,
+                    'open': row.open,
+                    'high': row.high,
+                    'low': row.low,
+                    'close': row.close,
+                    'volume': row.volume
+                } for row in rows]
+                
+                return pd.DataFrame(data)
+                
+        except Exception as e:
+            logger.error(f"Error getting stock data without indicators: {e}")
+            return None
+
+    async def store_technical_indicators(self, df: pd.DataFrame) -> bool:
+        """Store technical indicators in database
+        
+        Args:
+            df (pd.DataFrame): DataFrame containing price data and calculated indicators
+        """
+        try:
+            async with self.async_session() as session:
+                # Convert DataFrame rows to TechnicalIndicators objects
+                indicator_objects = []
+                for _, row in df.iterrows():
+                    indicators = TechnicalIndicators(
+                        symbol=row['symbol'],
+                        date=row['date'],
+                        bb_upper_20=row['bb_upper_20'],
+                        bb_middle_20=row['bb_middle_20'],
+                        bb_lower_20=row['bb_lower_20'],
+                        ma_50=row['ma_50'],
+                        ema_12=row['ema_12'],
+                        rsi_14=row['rsi_14'],
+                        macd_26=row['macd_26'],
+                        macd_signal_26=row['macd_signal_26'],
+                        macd_hist_26=row['macd_hist_26'],
+                        atr_14=row['atr_14'],
+                        cci_20=row['cci_20'],
+                        stoch_k_14=row['stoch_k_14'],
+                        stoch_d_14=row['stoch_d_14'],
+                        adx_14=row['adx_14'],
+                        di_pos_14=row['di_pos_14'],
+                        di_neg_14=row['di_neg_14'],
+                        vortex_pos_14=row['vortex_pos_14'],
+                        vortex_neg_14=row['vortex_neg_14'],
+                        obv=row['obv'],
+                        mfi_14=row['mfi_14'],
+                        vwap=row['vwap']
+                    )
+                    indicator_objects.append(indicators)
+                
+                # Bulk insert
+                session.add_all(indicator_objects)
+                await session.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error storing technical indicators: {e}")
+            return False
+
+    async def get_technical_indicators(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime
+    ) -> Optional[pd.DataFrame]:
+        """Get technical indicators for a symbol within a date range
+        
+        Args:
+            symbol (str): Stock symbol
+            start_date (datetime): Start date
+            end_date (datetime): End date
+            
+        Returns:
+            Optional[pd.DataFrame]: DataFrame containing technical indicators or None if error
+        """
+        try:
+            async with self.async_session() as session:
+                # Query technical indicators
+                query = select(TechnicalIndicators).where(
+                    TechnicalIndicators.symbol == symbol,
+                    TechnicalIndicators.date >= start_date,
+                    TechnicalIndicators.date <= end_date
+                ).order_by(TechnicalIndicators.date)
+                
+                result = await session.execute(query)
+                rows = result.scalars().all()
+                
+                if not rows:
+                    return None
+                    
+                # Convert to DataFrame
+                data = [{
+                    'symbol': row.symbol,
+                    'date': row.date,
+                    'bb_upper': row.bb_upper,
+                    'bb_middle': row.bb_middle,
+                    'bb_lower': row.bb_lower,
+                    'ma_50': row.ma_50,
+                    'ema_12': row.ema_12,
+                    'rsi_14': row.rsi_14,
+                    'macd': row.macd,
+                    'macd_signal': row.macd_signal,
+                    'macd_hist': row.macd_hist,
+                    'atr_14': row.atr_14,
+                    'cci_20': row.cci_20,
+                    'stoch_k': row.stoch_k,
+                    'stoch_d': row.stoch_d,
+                    'adx_14': row.adx_14,
+                    'vortex_pos': row.vortex_pos,
+                    'vortex_neg': row.vortex_neg,
+                    'obv': row.obv,
+                    'mfi_14': row.mfi_14,
+                    'vwap': row.vwap
+                } for row in rows]
+                
+                return pd.DataFrame(data)
+                
+        except Exception as e:
+            logger.error(f"Error getting technical indicators: {e}")
+            return None 

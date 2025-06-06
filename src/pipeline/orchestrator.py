@@ -8,6 +8,9 @@ from src.pipeline.workers.content_backfill_worker import ContentBackfillWorker
 from src.pipeline.queues import AnalysisResult, PipelineError, RSSItem
 from src.database import Database
 from src.utils.logger import get_logger
+from src.pipeline.fetchers.yf_price_fetcher import YFPriceFetcher
+from src.pipeline.calculators.ti_calculator import TICalculator
+from src.pipeline.workers.ti_backfill_worker import TIBackfillWorker
 
 class PipelineOrchestrator:
     """Orchestrates the news analysis pipeline"""
@@ -29,7 +32,10 @@ class PipelineOrchestrator:
         self.enabled_workers = enabled_workers or {
             "rss_fetcher": True,
             "llm_analyzer": True,
-            "content_backfill": True
+            "content_backfill": True,
+            "price_fetcher": True,
+            "ti_calculator": True,
+            "ti_backfill": True
         }
         
         # Initialize database
@@ -38,6 +44,7 @@ class PipelineOrchestrator:
         # Create queues
         self.rss_queue = asyncio.Queue()
         self.analysis_queue = asyncio.Queue()
+        self.price_queue = asyncio.Queue()
         self.error_queue = asyncio.Queue()
         
         # Create workers list
@@ -54,16 +61,54 @@ class PipelineOrchestrator:
                 )
             )
             
+        # Add Price Fetcher if enabled
+        if self.enabled_workers.get("price_fetcher", True):
+            self.workers.append(
+                YFPriceFetcher(
+                    input_queue=self.price_queue,
+                    output_queue=self.price_queue,
+                    error_queue=self.error_queue,
+                    db=self.db,
+                    symbols=["^GSPC"],  # S&P 500
+                    interval="1d",
+                    lookback_days=365,  # Always fetch 1 year of data
+                    fetch_interval=fetch_interval
+                )
+            )
+            
+        # Add TI Calculator if enabled
+        if self.enabled_workers.get("ti_calculator", True):
+            self.workers.append(
+                TICalculator(
+                    input_queue=self.price_queue,
+                    error_queue=self.error_queue,
+                    db=self.db
+                )
+            )
+            
+        # Add TI Backfill Worker if enabled
+        if self.enabled_workers.get("ti_backfill", True):
+            self.workers.append(
+                TIBackfillWorker(
+                    input_queue=self.price_queue,
+                    output_queue=self.price_queue,
+                    error_queue=self.error_queue,
+                    db=self.db,
+                    symbols=["^GSPC"],  # Same symbols as price fetcher
+                    batch_size=100,
+                    fetch_interval=fetch_interval
+                )
+            )
+            
         # Add LLM Analyzer if enabled
         if self.enabled_workers.get("llm_analyzer", True):
             self.workers.append(
                 LLMAnalyzer(
-                    input_queue=self.rss_queue,  # Now takes RSS items directly
+                    input_queue=self.rss_queue,
                     output_queue=self.analysis_queue,
                     error_queue=self.error_queue,
-                    stock_name=stock_name,
-                    model=model,
-                    db=self.db
+                    db=self.db,
+                    model=self.model
                 )
             )
             
@@ -71,10 +116,10 @@ class PipelineOrchestrator:
         if self.enabled_workers.get("content_backfill", True):
             self.workers.append(
                 ContentBackfillWorker(
-                    output_queue=self.rss_queue,
+                    input_queue=self.rss_queue,
+                    output_queue=self.analysis_queue,
                     error_queue=self.error_queue,
-                    db=self.db,
-                    check_interval=3600  # Check every hour
+                    db=self.db
                 )
             )
             

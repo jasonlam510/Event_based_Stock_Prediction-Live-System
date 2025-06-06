@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Dict, Any, Union
 from pydantic import HttpUrl
+import pandas as pd
 
 @dataclass
 class RSSItem:
@@ -52,4 +53,10 @@ class PipelineError:
     stage: str
     error: str
     timestamp: datetime
-    context: Dict[str, Any] 
+    context: Dict[str, Any]
+
+@dataclass
+class StockData:
+    """Stock price data for processing"""
+    symbol: str
+    data: pd.DataFrame 

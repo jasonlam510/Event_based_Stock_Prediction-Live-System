@@ -13,7 +13,6 @@ class YFPriceFetcher(PipelineWorker):
     
     def __init__(
         self,
-        input_queue: asyncio.Queue,
         output_queue: asyncio.Queue,
         error_queue: asyncio.Queue,
         db: Database,
@@ -23,7 +22,6 @@ class YFPriceFetcher(PipelineWorker):
         fetch_interval: int = 3600  # 1 hour
     ):
         super().__init__("price_fetcher")
-        self.input_queue = input_queue
         self.output_queue = output_queue
         self.error_queue = error_queue
         self.db = db
@@ -153,16 +151,18 @@ class YFPriceFetcher(PipelineWorker):
                 # Store in database and get new/updated data
                 new_data = await self.db.store_stock_data(df)
                 
+                # Create StockData object with all data, not just new/updated
+                result = StockData(
+                    symbol=symbol,
+                    data=df  # Use all data, not just new_data
+                )
+                
                 if new_data is not None:
-                    # Create StockData object
-                    result = StockData(
-                        symbol=symbol,
-                        data=new_data
-                    )
                     self.logger.info(f"Stored {len(new_data)} new/updated data points for {symbol}")
-                    return result
                 else:
                     self.logger.info(f"No new data to store for {symbol}")
+                    
+                return result
             else:
                 await self.error_queue.put(f"No data found for {symbol}")
                 

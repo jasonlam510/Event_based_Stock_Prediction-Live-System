@@ -568,16 +568,34 @@ class Database:
             return None
 
     async def store_technical_indicators(self, df: pd.DataFrame) -> bool:
-        """Store technical indicators in database
+        """Store technical indicators in database using bulk operations
         
         Args:
             df (pd.DataFrame): DataFrame containing price data and calculated indicators
         """
         try:
             async with self.async_session() as session:
-                # Convert DataFrame rows to TechnicalIndicators objects
-                indicator_objects = []
+                # Get all existing indicators for these symbols and dates in one query
+                query = select(TechnicalIndicators).where(
+                    TechnicalIndicators.symbol.in_(df['symbol'].unique()),
+                    TechnicalIndicators.date.in_(df['date'].unique())
+                )
+                result = await session.execute(query)
+                existing_indicators = result.scalars().all()
+                
+                # Create a lookup dictionary for existing indicators
+                existing_lookup = {
+                    (ind.symbol, ind.date): ind 
+                    for ind in existing_indicators
+                }
+                
+                # Prepare bulk merge
+                to_merge = []
                 for _, row in df.iterrows():
+                    key = (row['symbol'], row['date'])
+                    existing = existing_lookup.get(key)
+                    
+                    # Create new indicators object
                     indicators = TechnicalIndicators(
                         symbol=row['symbol'],
                         date=row['date'],
@@ -603,16 +621,51 @@ class Database:
                         mfi_14=row['mfi_14'],
                         vwap=row['vwap']
                     )
-                    indicator_objects.append(indicators)
+                    
+                    # Only add if new or different
+                    if not existing or not self._indicators_equal(existing, indicators):
+                        to_merge.append(indicators)
                 
-                # Bulk insert
-                session.add_all(indicator_objects)
-                await session.commit()
-                return True
+                if to_merge:
+                    # Bulk merge all changes
+                    for indicator in to_merge:
+                        await session.merge(indicator)
+                    await session.commit()
+                    logger.info(f"Stored {len(to_merge)} new/updated technical indicators")
+                    return True
+                else:
+                    logger.info("No new technical indicators to store")
+                    return True
                 
         except Exception as e:
             logger.error(f"Error storing technical indicators: {e}")
             return False
+            
+    def _indicators_equal(self, existing: TechnicalIndicators, new: TechnicalIndicators) -> bool:
+        """Compare two technical indicator records to check if they are identical"""
+        return (
+            existing.bb_upper_20 == new.bb_upper_20 and
+            existing.bb_middle_20 == new.bb_middle_20 and
+            existing.bb_lower_20 == new.bb_lower_20 and
+            existing.ma_50 == new.ma_50 and
+            existing.ema_12 == new.ema_12 and
+            existing.rsi_14 == new.rsi_14 and
+            existing.macd_26 == new.macd_26 and
+            existing.macd_signal_26 == new.macd_signal_26 and
+            existing.macd_hist_26 == new.macd_hist_26 and
+            existing.atr_14 == new.atr_14 and
+            existing.cci_20 == new.cci_20 and
+            existing.stoch_k_14 == new.stoch_k_14 and
+            existing.stoch_d_14 == new.stoch_d_14 and
+            existing.adx_14 == new.adx_14 and
+            existing.di_pos_14 == new.di_pos_14 and
+            existing.di_neg_14 == new.di_neg_14 and
+            existing.vortex_pos_14 == new.vortex_pos_14 and
+            existing.vortex_neg_14 == new.vortex_neg_14 and
+            existing.obv == new.obv and
+            existing.mfi_14 == new.mfi_14 and
+            existing.vwap == new.vwap
+        )
 
     async def get_technical_indicators(
         self,

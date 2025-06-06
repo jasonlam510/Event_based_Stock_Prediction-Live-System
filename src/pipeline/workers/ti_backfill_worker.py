@@ -14,7 +14,6 @@ class TIBackfillWorker(YFPriceFetcher):
     
     def __init__(
         self,
-        input_queue: asyncio.Queue,
         output_queue: asyncio.Queue,
         error_queue: asyncio.Queue,
         db: Database,
@@ -23,8 +22,7 @@ class TIBackfillWorker(YFPriceFetcher):
         fetch_interval: int = 3600  # 1 hour
     ):
         # Initialize with the queues since we need them for the TI calculator
-        super().__init__(
-            input_queue=input_queue,
+        super().__init__( 
             output_queue=output_queue,
             error_queue=error_queue,
             db=db,
@@ -61,12 +59,18 @@ class TIBackfillWorker(YFPriceFetcher):
                 return None
                 
             # Get historical data without indicators
+            # We need at least 50 data points for all indicators to calculate properly
+            # (the largest window size is 50 for MA)
             df = await self.db.get_stock_data_without_indicators(
                 symbol=symbol,
-                limit=self.batch_size
+                limit=max(50, self.batch_size)  # Ensure we have at least 50 data points
             )
             
             if df is not None and not df.empty:
+                if len(df) < 50:
+                    self.logger.warning(f"Not enough data points for {symbol}. Need at least 50, got {len(df)}")
+                    return None
+                    
                 # Create StockData object for TI calculator
                 result = StockData(
                     symbol=symbol,

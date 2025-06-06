@@ -65,7 +65,6 @@ class PipelineOrchestrator:
         if self.enabled_workers.get("price_fetcher", True):
             self.workers.append(
                 YFPriceFetcher(
-                    input_queue=self.price_queue,
                     output_queue=self.price_queue,
                     error_queue=self.error_queue,
                     db=self.db,
@@ -90,7 +89,6 @@ class PipelineOrchestrator:
         if self.enabled_workers.get("ti_backfill", True):
             self.workers.append(
                 TIBackfillWorker(
-                    input_queue=self.price_queue,
                     output_queue=self.price_queue,
                     error_queue=self.error_queue,
                     db=self.db,
@@ -116,7 +114,6 @@ class PipelineOrchestrator:
         if self.enabled_workers.get("content_backfill", True):
             self.workers.append(
                 ContentBackfillWorker(
-                    input_queue=self.rss_queue,
                     output_queue=self.analysis_queue,
                     error_queue=self.error_queue,
                     db=self.db

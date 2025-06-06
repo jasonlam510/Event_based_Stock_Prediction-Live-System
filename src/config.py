@@ -8,6 +8,15 @@ logger = get_logger(__name__)
 class Config:
     """Configuration manager for different environments."""
     
+    _instance = None
+    
+    def __new__(cls, env: str = None):
+        """Singleton pattern implementation"""
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(self, env: str = None):
         """Initialize configuration.
         
@@ -15,9 +24,14 @@ class Config:
             env (str, optional): Environment to load ('test' or 'prod'). 
                                If None, uses ENVIRONMENT variable or defaults to 'prod'
         """
+        # Skip initialization if already done
+        if self._initialized:
+            return
+            
         self.env = env or os.getenv('ENVIRONMENT', 'test')
         logger.info("Initializing Config with environment: %s", self.env)
         self._load_env()
+        self._initialized = True
         
     def _load_env(self):
         """Load environment variables based on the current environment."""
@@ -30,7 +44,6 @@ class Config:
         else:
             env_file = project_root / '.env'
             
-        
         # Load the environment variables
         if env_file.exists():
             # Set override=False to preserve existing environment variables

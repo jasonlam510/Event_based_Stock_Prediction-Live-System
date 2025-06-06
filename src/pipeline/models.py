@@ -81,22 +81,9 @@ class AnalysisResult(Base):
     relevance_score = Column(Float, nullable=False)
     event_importance = Column(Float, nullable=False)
     event_type = Column(String, nullable=False)
-    analysis_timestamp = Column(DateTime(timezone=True), nullable=False)
-    raw_content = Column(String, nullable=False)  # The RSS item title that was analyzed
-    content_metadata = Column(JSON)  # Contains source_name, source_url, media_url, and pub_date
     created_at = Column(DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
 
-    # Define composite primary key and foreign key
+    # Define composite primary key
     __table_args__ = (
         PrimaryKeyConstraint('guid', 'pub_date', name='analysis_results_pkey'),
-        ForeignKeyConstraint(
-            ['guid', 'pub_date'],
-            ['yf_rss_items.guid', 'yf_rss_items.pub_date'],
-            name='analysis_results_yf_rss_items_fkey'
-        ),
-        ForeignKeyConstraint(
-            ['guid', 'pub_date'],
-            ['google_news_rss_items.guid', 'google_news_rss_items.pub_date'],
-            name='analysis_results_google_news_rss_items_fkey'
-        ),
     ) 

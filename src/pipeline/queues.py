@@ -33,8 +33,8 @@ class GoogleNewsRSSItem(BaseRSSItem):
     description: Optional[str] = None
     is_perma_link: bool = False
 
-# Union type for all RSS item types
-RSSItem = Union[YFRSSItem, GoogleNewsRSSItem]
+# Type alias for source-specific RSS items
+SourceRSSItem = Union[YFRSSItem, GoogleNewsRSSItem]
 
 @dataclass
 class AnalysisResult:
@@ -44,9 +44,6 @@ class AnalysisResult:
     relevance_score: float
     event_importance: float
     event_type: str
-    analysis_timestamp: datetime
-    raw_content: str  # The RSS item title that was analyzed
-    metadata: Dict[str, Any]  # Contains pub_date
 
 @dataclass
 class PipelineError:

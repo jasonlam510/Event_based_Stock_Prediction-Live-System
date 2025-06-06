@@ -56,21 +56,13 @@ class LLMAnalyzer(PipelineWorker):
                 model=self.model
             )
             
-            # Create metadata with only pub_date
-            metadata: Dict[str, Any] = {
-                "pub_date": item.pub_date.isoformat()
-            }
-            
             # Create result
             result = AnalysisResult(
                 guid=item.guid,
                 sentiment_score=analysis.sentiment_score,
                 relevance_score=analysis.relevance_score,
                 event_importance=analysis.event_importance,
-                event_type=analysis.event_type,
-                analysis_timestamp=datetime.now(timezone.utc),
-                raw_content=item.title,
-                metadata=metadata
+                event_type=analysis.event_type
             )
             
             self.logger.info(f"Analyzed title for {item.guid}")

@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from src.pipeline.worker import PipelineWorker
-from src.pipeline.queues import YFRSSItem, GoogleNewsRSSItem, PipelineError
+from src.pipeline.queues import YFRSSItem, GoogleNewsRSSItem, RSSItem, PipelineError
 from src.database import Database
 from src.utils.logger import get_logger
 
@@ -49,35 +49,26 @@ class ContentBackfillWorker(PipelineWorker):
                 self.logger.info("No unanalyzed RSS items found")
                 return []
                 
-            # Convert to RSSItem objects
+            # Convert to RSSItem objects for queue
             rss_items = []
             
             # Process Yahoo Finance items
             for item in yf_items:
-                rss_item = YFRSSItem(
-                    title=item["title"],
-                    link=item["link"],
-                    pub_date=item["pub_date"],
+                # Create simplified RSSItem for queue
+                rss_item = RSSItem(
                     guid=item["guid"],
-                    source_name=item["source_name"],
-                    source_url=item["source_url"],
-                    media_url=item["media_url"],
-                    media_height=item["media_height"],
-                    media_width=item["media_width"]
+                    pub_date=item["pub_date"],
+                    title=item["title"]
                 )
                 rss_items.append(rss_item)
                 
             # Process Google News items
             for item in google_news_items:
-                rss_item = GoogleNewsRSSItem(
-                    title=item["title"],
-                    link=item["link"],
-                    pub_date=item["pub_date"],
+                # Create simplified RSSItem for queue
+                rss_item = RSSItem(
                     guid=item["guid"],
-                    source_name=item["source_name"],
-                    source_url=item["source_url"],
-                    description=item["description"],
-                    is_perma_link=item["is_perma_link"]
+                    pub_date=item["pub_date"],
+                    title=item["title"]
                 )
                 rss_items.append(rss_item)
                 

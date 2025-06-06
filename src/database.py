@@ -236,10 +236,7 @@ class Database:
                     sentiment_score=result.sentiment_score,
                     relevance_score=result.relevance_score,
                     event_importance=result.event_importance,
-                    event_type=result.event_type,
-                    analysis_timestamp=result.analysis_timestamp,
-                    raw_content=result.raw_content,
-                    content_metadata=result.metadata
+                    event_type=result.event_type
                 )
                 
                 await session.merge(db_result)
@@ -260,7 +257,7 @@ class Database:
                 ).join(
                     AnalysisResult
                 ).order_by(
-                    AnalysisResult.analysis_timestamp.desc()
+                    AnalysisResult.created_at.desc()
                 ).limit(limit)
                 
                 result = await session.execute(query)
@@ -276,8 +273,7 @@ class Database:
                     "relevance_score": row.AnalysisResult.relevance_score,
                     "event_importance": row.AnalysisResult.event_importance,
                     "event_type": row.AnalysisResult.event_type,
-                    "analysis_timestamp": row.AnalysisResult.analysis_timestamp,
-                    "metadata": row.AnalysisResult.content_metadata
+                    "created_at": row.AnalysisResult.created_at
                 } for row in rows]
                 
         except Exception as e:

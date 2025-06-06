@@ -85,6 +85,9 @@ async def analyze_news(
         
     Returns:
         NewsAnalysis: The analysis results
+        
+    Raises:
+        ValueError: If the API call fails or returns invalid data
     """
     from .gemini_client import generate
     from google.genai import types
@@ -96,10 +99,17 @@ async def analyze_news(
         response_schema=NewsAnalysis
     )
     
-    response = await generate(
-        contents=prompt,
-        model=model,
-        generate_content_config=config
-    )
-    
-    return response.parsed 
+    try:
+        response = await generate(
+            contents=prompt,
+            model=model,
+            generate_content_config=config
+        )
+        
+        if not response or not response.parsed:
+            raise ValueError("Empty response from LLM")
+            
+        return response.parsed
+    except Exception as e:
+        logger.error(f"Failed to analyze news: {str(e)}")
+        raise ValueError(f"News analysis failed: {str(e)}") 

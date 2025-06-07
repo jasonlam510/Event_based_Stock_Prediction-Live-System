@@ -36,7 +36,7 @@ services:
       - myfyp_network
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.0.0
     container_name: myfyp_grafana
     restart: unless-stopped
     ports:
@@ -45,7 +45,7 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=I_Love_CityU
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-clock-panel
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,marcusolsson-dynamictext-panel
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning

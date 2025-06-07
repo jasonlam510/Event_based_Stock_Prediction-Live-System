@@ -1,4 +1,5 @@
 import os
+
 from pathlib import Path
 from dotenv import load_dotenv
 from src.utils.logger import get_logger
@@ -36,7 +37,7 @@ class Config:
     def _load_env(self):
         """Load environment variables based on the current environment."""
         # Get the project root directory
-        project_root = Path(__file__).parent.parent
+        project_root = Path.cwd()
         
         # Load the appropriate .env file
         if self.env == 'test':

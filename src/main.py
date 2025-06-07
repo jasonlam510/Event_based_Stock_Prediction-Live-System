@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 project_root = Path.cwd() # Get the current directory
 sys.path.append(str(project_root))
-from src.config import Config
+from utils.config import Config
 from src.pipeline.orchestrator import PipelineOrchestrator
 from src.utils.logger import get_logger
 from src.database import init_db, close_db

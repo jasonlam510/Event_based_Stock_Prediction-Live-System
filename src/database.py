@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select
 from sqlalchemy.ext.declarative import declarative_base
-from src.config import Config
+from utils.config import Config
 from src.utils.logger import get_logger
 from src.pipeline.queues import YFRSSItem, GoogleNewsRSSItem, AnalysisResult as QueueAnalysisResult
 from pipeline.models import Base, YFRSSItem as DBYFRSSItem, GoogleNewsRSSItem as DBGoogleNewsRSSItem, AnalysisResult, StockData, TechnicalIndicators

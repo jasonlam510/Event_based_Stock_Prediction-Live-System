@@ -30,7 +30,7 @@ async def main():
     # Define which workers to enable/disable
     enabled_workers = {
         "rss_fetcher": True,        # Enable RSS fetcher
-        "llm_analyzer": False,       # Enable LLM analyzer
+        "llm_analyzer": True,       # Enable LLM analyzer
         "content_backfill": True,   # Enable content backfill
         "price_fetcher": True,      # Enable price fetcher
         "ti_calculator": True,      # Enable technical indicator calculator

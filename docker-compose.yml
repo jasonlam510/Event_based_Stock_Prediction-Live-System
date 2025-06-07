@@ -35,9 +35,31 @@ services:
     networks:
       - myfyp_network
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: myfyp_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=I_Love_CityU
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - postgres
+    networks:
+      - myfyp_network
+
 volumes:
   postgres_data:
     name: myfyp_postgres_data
+  grafana_data:
+    name: myfyp_grafana_data
 
 networks:
   myfyp_network:

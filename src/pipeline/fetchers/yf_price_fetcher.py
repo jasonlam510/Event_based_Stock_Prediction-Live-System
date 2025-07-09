@@ -98,17 +98,22 @@ class YFPriceFetcher(PipelineWorker):
             self.logger.debug(f"Columns after reset_index for {symbol}: {df.columns.tolist()}")
             self.logger.debug(f"First few rows after reset_index:\n{df.head()}")
             
-            # Check if Date column exists
-            if 'Date' not in df.columns:
-                self.logger.error(f"Date column not found in DataFrame for {symbol}. Available columns: {df.columns.tolist()}")
+            # Check if Date or Datetime column exists
+            date_col = None
+            if 'Date' in df.columns:
+                date_col = 'Date'
+            elif 'Datetime' in df.columns:
+                date_col = 'Datetime'
+            else:
+                self.logger.error(f"Date or Datetime column not found in DataFrame for {symbol}. Available columns: {df.columns.tolist()}")
                 return None
             
             # Convert timezone-aware timestamps to UTC
-            df['Date'] = df['Date'].dt.tz_convert('UTC')
+            df[date_col] = df[date_col].dt.tz_convert('UTC')
             
             # Convert column names to match database
             df = df.rename(columns={
-                'Date': 'date',
+                date_col: 'date',
                 'Open': 'open',
                 'High': 'high',
                 'Low': 'low',

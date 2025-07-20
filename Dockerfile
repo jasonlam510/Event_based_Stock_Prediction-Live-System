@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# Copy the rest of the application
-COPY . .
+# Copy only the necessary application files
+COPY src/ ./src/
 
 # Set environment variables
 ENV PYTHONPATH=/app

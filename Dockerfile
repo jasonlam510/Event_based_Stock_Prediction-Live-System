@@ -19,9 +19,6 @@ COPY src/ ./src/
 # Set environment variables
 ENV PYTHONPATH=/app
 
-# Make port 5000 available to the world outside this container
-EXPOSE 5000
-
 # Run the application
 CMD ["python", "src/main.py"]
 

@@ -10,6 +10,8 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
+    environment:
+      - ENVIRONMENT=prod
     networks:
       - myfyp_network
 

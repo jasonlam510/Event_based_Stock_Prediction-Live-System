@@ -321,8 +321,8 @@ class Database:
             logger.error(f"Error getting latest Google News publication date: {e}")
             return None
 
-    async def get_unanalyzed_yf_rss_items(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get Yahoo Finance RSS items that don't have corresponding analysis results"""
+    async def get_unanalyzed_yf_rss_items(self) -> List[Dict[str, Any]]:
+        """Get all Yahoo Finance RSS items that don't have corresponding analysis results"""
         try:
             async with self.async_session() as session:
                 # Query to find RSS items without analysis results
@@ -333,7 +333,7 @@ class Database:
                     AnalysisResult.guid.is_(None)
                 ).order_by(
                     DBYFRSSItem.pub_date.desc()
-                ).limit(limit)
+                )
                 
                 result = await session.execute(query)
                 items = result.scalars().all()
@@ -355,8 +355,8 @@ class Database:
             logger.error(f"Error getting unanalyzed Yahoo Finance RSS items: {e}")
             return []
 
-    async def get_unanalyzed_google_news_rss_items(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get Google News RSS items that don't have corresponding analysis results"""
+    async def get_unanalyzed_google_news_rss_items(self) -> List[Dict[str, Any]]:
+        """Get all Google News RSS items that don't have corresponding analysis results"""
         try:
             async with self.async_session() as session:
                 # Query to find RSS items without analysis results
@@ -367,7 +367,7 @@ class Database:
                     AnalysisResult.guid.is_(None)
                 ).order_by(
                     DBGoogleNewsRSSItem.pub_date.desc()
-                ).limit(limit)
+                )
                 
                 result = await session.execute(query)
                 items = result.scalars().all()

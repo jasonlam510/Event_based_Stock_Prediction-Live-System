@@ -14,15 +14,13 @@ class ContentBackfillWorker(PipelineWorker):
         output_queue: asyncio.Queue,
         error_queue: asyncio.Queue,
         db: Database,
-        check_interval: int = 3600,  # 1 hour
-        batch_size: int = 100
+        check_interval: int = 3600  # 1 hour
     ):
         super().__init__("content_backfill")
         self.output_queue = output_queue
         self.error_queue = error_queue
         self.db = db
         self.check_interval = check_interval
-        self.batch_size = batch_size
         
     async def get_next_item(self) -> Optional[List[Any]]:
         """Wait for next check interval"""
@@ -42,8 +40,8 @@ class ContentBackfillWorker(PipelineWorker):
         """Check for and process unanalyzed RSS items from both sources"""
         try:
             # Get unanalyzed items from both sources
-            yf_items = await self.db.get_unanalyzed_yf_rss_items(limit=self.batch_size)
-            google_news_items = await self.db.get_unanalyzed_google_news_rss_items(limit=self.batch_size)
+            yf_items = await self.db.get_unanalyzed_yf_rss_items()
+            google_news_items = await self.db.get_unanalyzed_google_news_rss_items()
             
             if not yf_items and not google_news_items:
                 self.logger.info("No unanalyzed RSS items found")
@@ -82,7 +80,6 @@ class ContentBackfillWorker(PipelineWorker):
                 error=str(e),
                 timestamp=datetime.now(timezone.utc),
                 context={
-                    "batch_size": self.batch_size,
                     "check_interval": self.check_interval
                 }
             )

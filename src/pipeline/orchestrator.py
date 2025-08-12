@@ -114,7 +114,7 @@ class PipelineOrchestrator:
         if self.enabled_workers.get("content_backfill", True):
             self.workers.append(
                 ContentBackfillWorker(
-                    output_queue=self.analysis_queue,
+                    output_queue=self.rss_queue,
                     error_queue=self.error_queue,
                     db=self.db
                 )

@@ -30,7 +30,10 @@ class LLMAnalyzer(PipelineWorker):
     async def get_next_item(self) -> Optional[RSSItem]:
         """Get next RSS item from input queue"""
         try:
-            return await self.input_queue.get()
+            item = await self.input_queue.get()
+            if item:
+                self.logger.info(f"Received RSS item for analysis: {item.guid}")
+            return item
         except asyncio.CancelledError:
             return None
             

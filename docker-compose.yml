@@ -8,10 +8,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      - DATABASE_URL=postgresql://postgres:I_Love_CityU@postgres:5432/myfypdb
     volumes:
       - .:/app
+    environment:
+      - ENVIRONMENT=prod
     networks:
       - myfyp_network
 

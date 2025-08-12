@@ -33,6 +33,7 @@ class ContentBackfillWorker(PipelineWorker):
         
     async def put_result(self, items: List[Any]):
         """Put items in output queue"""
+        self.logger.info(f"Putting {len(items)} items into analysis queue for processing")
         for item in items:
             await self.output_queue.put(item)
             
@@ -84,4 +85,5 @@ class ContentBackfillWorker(PipelineWorker):
                 }
             )
             await self.error_queue.put(error)
+            raise 
             raise 

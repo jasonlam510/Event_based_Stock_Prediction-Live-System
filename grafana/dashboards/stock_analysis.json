@@ -1,817 +1,857 @@
 {
-    "annotations": {
-      "list": [
-        {
-          "builtIn": 1,
-          "datasource": {
-            "type": "grafana",
-            "uid": "-- Grafana --"
-          },
-          "enable": true,
-          "hide": true,
-          "iconColor": "rgba(0, 211, 255, 1)",
-          "name": "Annotations & Alerts",
-          "type": "dashboard"
-        }
-      ]
-    },
-    "editable": true,
-    "fiscalYearStartMonth": 0,
-    "graphTooltip": 0,
-    "links": [],
-    "panels": [
+  "annotations": {
+    "list": [
       {
-        "collapsed": false,
-        "gridPos": {
-          "h": 1,
-          "w": 24,
-          "x": 0,
-          "y": 0
-        },
-        "id": 6,
-        "panels": [],
-        "title": "Price Chart",
-        "type": "row"
-      },
-      {
+        "builtIn": 1,
         "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "P40AE60E18F02DE32"
+          "type": "grafana",
+          "uid": "-- Grafana --"
         },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineStyle": {
-                "fill": "solid"
-              },
-              "lineWidth": 1,
-              "pointSize": 1,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                }
-              ]
-            }
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "Time"
-              },
-              "properties": [
-                {
-                  "id": "unit",
-                  "value": "YYYY-MM-DD"
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 15,
-          "w": 14,
-          "x": 0,
-          "y": 1
-        },
-        "id": 1,
-        "options": {
-          "candleStyle": "candles",
-          "colorStrategy": "close-close",
-          "colors": {
-            "down": "red",
-            "up": "green"
-          },
-          "includeAllFields": true,
-          "legend": {
-            "calcs": [],
-            "displayMode": "table",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "mode": "candles+volume",
-          "tooltip": {
-            "hideZeros": false,
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "11.0.0",
-        "targets": [
-          {
-            "datasource": {
-              "type": "postgres",
-              "uid": "TimescaleDB"
-            },
-            "editorMode": "code",
-            "format": "time_series",
-            "rawQuery": true,
-            "rawSql": "SELECT\n  s.date AS Time,\n  s.open,\n  s.high,\n  s.low,\n  s.close,\n  s.volume,\n  t.bb_upper_20 as \"BB Upper\",\n  t.bb_middle_20 as \"BB Middle\",\n  t.bb_lower_20 as \"BB Lower\"\nFROM stock_data s\nLEFT JOIN technical_indicators t\n  ON s.symbol = t.symbol AND s.date = t.date\nWHERE s.symbol = '$target_stock'\nORDER BY s.date",
-            "refId": "A",
-            "sql": {
-              "columns": [
-                {
-                  "parameters": [],
-                  "type": "function"
-                }
-              ],
-              "groupBy": [],
-              "limit": 50
-            }
-          }
-        ],
-        "title": "OHLC of $target_stock (Daily)",
-        "transformations": [
-          {
-            "id": "formatTime",
-            "options": {
-              "outputFormat": "YYYY-MM-DD",
-              "timeField": "",
-              "useTimezone": true
-            }
-          }
-        ],
-        "type": "candlestick"
-      },
-      {
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "P40AE60E18F02DE32"
-        },
-        "gridPos": {
-          "h": 4,
-          "w": 5,
-          "x": 14,
-          "y": 1
-        },
-        "id": 3,
-        "options": {
-          "bgColor": "",
-          "clockType": "12 hour",
-          "countdownSettings": {
-            "endCountdownTime": "2025-06-08T01:52:01+02:00",
-            "endText": "00:00:00",
-            "invalidValueText": "invalid value",
-            "noValueText": "no value found",
-            "queryCalculation": "last",
-            "source": "input"
-          },
-          "countupSettings": {
-            "beginCountupTime": "2025-06-08T01:52:01+02:00",
-            "beginText": "00:00:00",
-            "invalidValueText": "invalid value",
-            "noValueText": "no value found",
-            "queryCalculation": "last",
-            "source": "input"
-          },
-          "dateSettings": {
-            "dateFormat": "YYYY-MM-DD",
-            "fontSize": "20px",
-            "fontWeight": "normal",
-            "locale": "",
-            "showDate": false
-          },
-          "descriptionSettings": {
-            "descriptionText": "",
-            "fontSize": "12px",
-            "fontWeight": "normal",
-            "noValueText": "no description found",
-            "source": "none"
-          },
-          "fontMono": false,
-          "mode": "time",
-          "refresh": "sec",
-          "timeSettings": {
-            "fontSize": "48px",
-            "fontWeight": "normal"
-          },
-          "timezone": "America/New_York",
-          "timezoneSettings": {
-            "fontSize": "12px",
-            "fontWeight": "normal",
-            "showTimezone": true,
-            "zoneFormat": "nameOffset"
-          }
-        },
-        "pluginVersion": "2.1.8",
-        "title": "US Time",
-        "type": "grafana-clock-panel"
-      },
-      {
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "P40AE60E18F02DE32"
-        },
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 11,
-          "w": 10,
-          "x": 14,
-          "y": 5
-        },
-        "id": 2,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "hideZeros": false,
-            "maxHeight": 600,
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "12.0.1",
-        "targets": [
-          {
-            "datasource": {
-              "type": "postgres",
-              "uid": "TimescaleDB"
-            },
-            "editorMode": "code",
-            "format": "time_series",
-            "rawQuery": true,
-            "rawSql": "SELECT\n  date as time,\n  close as value,\n  symbol as metric\nFROM stock_data\nWHERE symbol = '$target_stock'\nORDER BY date",
-            "refId": "A",
-            "sql": {
-              "columns": [
-                {
-                  "parameters": [],
-                  "type": "function"
-                }
-              ],
-              "groupBy": [],
-              "limit": 50
-            }
-          }
-        ],
-        "title": "Stock Price History vs Prediction",
-        "type": "timeseries"
-      },
-      {
-        "collapsed": false,
-        "gridPos": {
-          "h": 1,
-          "w": 24,
-          "x": 0,
-          "y": 16
-        },
-        "id": 5,
-        "panels": [],
-        "title": "US News",
-        "type": "row"
-      },
-      {
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "P40AE60E18F02DE32"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 19,
-          "w": 24,
-          "x": 0,
-          "y": 17
-        },
-        "id": 4,
-        "options": {
-          "afterRender": "",
-          "content": "<div style=\"\n     display: flex;\n     align-items: flex-start;\n     padding: 8px;\n     border-bottom: 1px solid #eee;\n   \">\n  <!-- 1) Thumbnail (now on the left) -->\n  {{#if media_url}}\n  <div style=\"flex: 0 0 auto; max-width: 160px; margin-right: 12px;\">\n    <img\n      src=\"{{media_url}}\"\n      alt=\"thumbnail\"\n      style=\"width:100%; height:auto; border-radius:4px\"\n    />\n  </div>\n  {{/if}}\n\n  <!-- 2) Meta (middle now) -->\n  <div style=\"flex: 2 1 0; margin-right:16px;\">\n    <h2 style=\"margin:0; font-size:1.6em; line-height:1.2\">\n      <a href=\"{{link}}\" target=\"_blank\" style=\"color:#1f78c1; text-decoration:none\">\n        {{title}}\n      </a>\n    </h2>\n    <p style=\"margin:4px 0 0; font-size:0.9em; color:#555\">\n      {{pub_date}}\n      {{#if source_name}}\n      by\n      <a href=\"{{source_url}}\" target=\"_blank\" style=\"color:#1f78c1\">\n        {{source_name}}\n      </a>\n      {{/if}}\n    </p>\n  </div>\n\n  <!-- 3) Analysis (rightmost) -->\n  <div style=\"\n        flex: 1 1 0;\n        font-size:0.95em;\n        color:#888;\n        line-height:1.4;\n      \">\n    <div>Sentiment: {{sentiment_score}}</div>\n    <div>Relevance: {{relevance_score}}</div>\n    <div>Importance: {{event_importance}}</div>\n    <div>Final Score: {{final_score}}</div>\n    <div>Type: {{event_type}}</div>\n\n  </div>\n</div>",
-          "contentPartials": [],
-          "defaultContent": "The query didn't return any results.",
-          "editor": {
-            "format": "auto",
-            "language": "html"
-          },
-          "editors": [],
-          "externalStyles": [],
-          "helpers": "",
-          "renderMode": "everyRow",
-          "styles": "",
-          "wrap": true
-        },
-        "pluginVersion": "5.7.0",
-        "targets": [
-          {
-            "datasource": {
-              "type": "grafana-postgresql-datasource",
-              "uid": "P40AE60E18F02DE32"
-            },
-            "editorMode": "code",
-            "format": "table",
-            "rawQuery": true,
-            "rawSql": "SELECT\n  y.pub_date,\n  y.title,\n  y.link,\n  y.source_name,\n  y.source_url,\n  y.media_url,\n  a.sentiment_score,\n  a.relevance_score,\n  a.event_importance,\n  a.event_type,\n  ROUND(\n    (a.sentiment_score\n     * a.relevance_score\n     * a.event_importance\n    )::numeric\n  , 2\n  ) AS final_score\nFROM yf_rss_items AS y\nINNER JOIN analysis_results AS a\n  ON y.guid = a.guid\n  AND y.pub_date = a.pub_date\nWHERE\n  -- last 24h\n  y.pub_date >= NOW() - INTERVAL '24 HOURS'\n  -- filter event_type via dashboard variable:\n  AND a.event_type IN ($eventType)\nORDER BY ${sortBy:raw} DESC\nLIMIT 100;\n",
-            "refId": "A",
-            "sql": {
-              "columns": [
-                {
-                  "parameters": [],
-                  "type": "function"
-                }
-              ],
-              "groupBy": [
-                {
-                  "property": {
-                    "type": "string"
-                  },
-                  "type": "groupBy"
-                }
-              ],
-              "limit": 50
-            }
-          }
-        ],
-        "title": "Last 24hr US news",
-        "transformations": [
-          {
-            "id": "formatTime",
-            "options": {
-              "outputFormat": "YYYY-MM-DD HH:MM",
-              "timeField": "pub_date",
-              "timezone": "browser",
-              "useTimezone": true
-            }
-          }
-        ],
-        "type": "marcusolsson-dynamictext-panel"
-      },
-      {
-        "collapsed": false,
-        "gridPos": {
-          "h": 1,
-          "w": 24,
-          "x": 0,
-          "y": 36
-        },
-        "id": 7,
-        "panels": [],
-        "title": "Stat",
-        "type": "row"
-      },
-      {
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "P40AE60E18F02DE32"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "left",
-              "barAlignment": 0,
-              "drawStyle": "bars",
-              "fillOpacity": 50,
-              "gradientMode": "opacity",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "never",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "Time"
-              },
-              "properties": [
-                {
-                  "id": "unit",
-                  "value": ""
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 24,
-          "x": 0,
-          "y": 37
-        },
-        "id": 8,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "maxHeight": 600,
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "11.0.0",
-        "targets": [
-          {
-            "datasource": {
-              "type": "grafana-postgresql-datasource",
-              "uid": "P40AE60E18F02DE32"
-            },
-            "editorMode": "code",
-            "format": "time_series",
-            "rawQuery": true,
-            "rawSql": "SELECT\n  DATE(pub_date) AS time,\n  COUNT(*) AS news_count\nFROM yf_rss_items\nGROUP BY time\nORDER BY time ASC;",
-            "refId": "A",
-            "sql": {
-              "columns": [
-                {
-                  "parameters": [],
-                  "type": "function"
-                }
-              ],
-              "groupBy": [
-                {
-                  "property": {
-                    "type": "string"
-                  },
-                  "type": "groupBy"
-                }
-              ],
-              "limit": 50
-            }
-          }
-        ],
-        "title": "Number of News Items per Day",
-        "transformations": [
-          {
-            "id": "formatTime",
-            "options": {}
-          }
-        ],
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "P40AE60E18F02DE32"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "points",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 10,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 9,
-          "w": 24,
-          "x": 0,
-          "y": 45
-        },
-        "id": 9,
-        "options": {
-          "legend": {
-            "calcs": [
-              "last"
-            ],
-            "displayMode": "table",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "maxHeight": 600,
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "11.0.0",
-        "targets": [
-          {
-            "datasource": {
-              "type": "grafana-postgresql-datasource",
-              "uid": "P40AE60E18F02DE32"
-            },
-            "editorMode": "code",
-            "format": "time_series",
-            "rawQuery": true,
-            "rawSql": "SELECT\n  DATE(pub_date) AS time,\n  event_type AS event_type,\n  SUM(sentiment_score * relevance_score * event_importance) AS final_score\nFROM analysis_results\nGROUP BY time, event_type\nORDER BY time ASC, event_type;",
-            "refId": "A",
-            "sql": {
-              "columns": [
-                {
-                  "parameters": [],
-                  "type": "function"
-                }
-              ],
-              "groupBy": [
-                {
-                  "property": {
-                    "type": "string"
-                  },
-                  "type": "groupBy"
-                }
-              ],
-              "limit": 50
-            }
-          }
-        ],
-        "title": "Daily Final Score by Event Type",
-        "type": "timeseries"
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
       }
-    ],
-    "refresh": "5s",
-    "schemaVersion": 39,
-    "tags": [],
-    "templating": {
-      "list": [
-        {
-          "allValue": "",
-          "allowCustomValue": false,
-          "current": {
-            "selected": false,
-            "text": "^GSPC",
-            "value": "^GSPC"
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "panels": [],
+      "title": "Price Chart",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P40AE60E18F02DE32"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
           },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "YYYY-MM-DD"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 14,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "candleStyle": "candles",
+        "colorStrategy": "close-close",
+        "colors": {
+          "down": "red",
+          "up": "green"
+        },
+        "includeAllFields": true,
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mode": "candles+volume",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
           "datasource": {
             "type": "postgres",
             "uid": "TimescaleDB"
           },
-          "definition": "SELECT DISTINCT symbol FROM stock_data ORDER BY symbol",
-          "hide": 0,
-          "includeAll": false,
-          "label": "Target Stock",
-          "multi": false,
-          "name": "target_stock",
-          "options": [],
-          "query": "SELECT DISTINCT symbol FROM stock_data ORDER BY symbol",
-          "refresh": 1,
-          "regex": "",
-          "skipUrlSync": false,
-          "sort": 1,
-          "type": "query"
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  s.date AS Time,\n  s.open,\n  s.high,\n  s.low,\n  s.close,\n  s.volume,\n  t.bb_upper_20 as \"BB Upper\",\n  t.bb_middle_20 as \"BB Middle\",\n  t.bb_lower_20 as \"BB Lower\"\nFROM stock_data s\nLEFT JOIN technical_indicators t\n  ON s.symbol = t.symbol AND s.date = t.date\nWHERE s.symbol = '$target_stock'\nORDER BY s.date",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "OHLC of $target_stock (Daily)",
+      "transformations": [
+        {
+          "id": "formatTime",
+          "options": {
+            "outputFormat": "YYYY-MM-DD",
+            "timeField": "",
+            "useTimezone": true
+          }
+        }
+      ],
+      "type": "candlestick"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P40AE60E18F02DE32"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 10,
+        "x": 14,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "bgColor": "",
+        "clockType": "12 hour",
+        "countdownSettings": {
+          "endCountdownTime": "2025-06-08T01:52:01+02:00",
+          "endText": "00:00:00",
+          "invalidValueText": "invalid value",
+          "noValueText": "no value found",
+          "queryCalculation": "last",
+          "source": "input"
+        },
+        "countupSettings": {
+          "beginCountupTime": "2025-06-08T01:52:01+02:00",
+          "beginText": "00:00:00",
+          "invalidValueText": "invalid value",
+          "noValueText": "no value found",
+          "queryCalculation": "last",
+          "source": "input"
+        },
+        "dateSettings": {
+          "dateFormat": "YYYY-MM-DD",
+          "fontSize": "20px",
+          "fontWeight": "normal",
+          "locale": "",
+          "showDate": false
+        },
+        "descriptionSettings": {
+          "descriptionText": "",
+          "fontSize": "12px",
+          "fontWeight": "normal",
+          "noValueText": "no description found",
+          "source": "none"
+        },
+        "fontMono": false,
+        "mode": "time",
+        "refresh": "sec",
+        "timeSettings": {
+          "fontSize": "48px",
+          "fontWeight": "normal"
+        },
+        "timezone": "America/New_York",
+        "timezoneSettings": {
+          "fontSize": "12px",
+          "fontWeight": "normal",
+          "showTimezone": true,
+          "zoneFormat": "nameOffset"
+        }
+      },
+      "pluginVersion": "2.1.8",
+      "title": "US Time",
+      "type": "grafana-clock-panel"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P40AE60E18F02DE32"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 10,
+        "x": 14,
+        "y": 5
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "maxHeight": 600,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT\n  date as time,\n  close as value,\n  symbol as metric\nFROM stock_data\nWHERE symbol = '$target_stock'\nORDER BY date",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [],
+            "limit": 50
+          }
         },
         {
-          "current": {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "P40AE60E18F02DE32"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT *\nFROM prediction\nWHERE symbol = '$target_stock'\nORDER BY date",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [
+                  {
+                    "name": "predicted_close",
+                    "type": "functionParameter"
+                  }
+                ],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "table": "prediction"
+        }
+      ],
+      "title": "Stock Price History vs Prediction",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "panels": [],
+      "title": "US News",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P40AE60E18F02DE32"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 19,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 4,
+      "options": {
+        "afterRender": "",
+        "content": "<div style=\"\n     display: flex;\n     align-items: flex-start;\n     padding: 8px;\n     border-bottom: 1px solid #eee;\n   \">\n  <!-- 1) Thumbnail (now on the left) -->\n  {{#if media_url}}\n  <div style=\"flex: 0 0 auto; max-width: 160px; margin-right: 12px;\">\n    <img\n      src=\"{{media_url}}\"\n      alt=\"thumbnail\"\n      style=\"width:100%; height:auto; border-radius:4px\"\n    />\n  </div>\n  {{/if}}\n\n  <!-- 2) Meta (middle now) -->\n  <div style=\"flex: 2 1 0; margin-right:16px;\">\n    <h2 style=\"margin:0; font-size:1.6em; line-height:1.2\">\n      <a href=\"{{link}}\" target=\"_blank\" style=\"color:#1f78c1; text-decoration:none\">\n        {{title}}\n      </a>\n    </h2>\n    <p style=\"margin:4px 0 0; font-size:0.9em; color:#555\">\n      {{pub_date}}\n      {{#if source_name}}\n      by\n      <a href=\"{{source_url}}\" target=\"_blank\" style=\"color:#1f78c1\">\n        {{source_name}}\n      </a>\n      {{/if}}\n    </p>\n  </div>\n\n  <!-- 3) Analysis (rightmost) -->\n  <div style=\"\n        flex: 1 1 0;\n        font-size:0.95em;\n        color:#888;\n        line-height:1.4;\n      \">\n    <div>Sentiment: {{sentiment_score}}</div>\n    <div>Relevance: {{relevance_score}}</div>\n    <div>Importance: {{event_importance}}</div>\n    <div>Final Score: {{final_score}}</div>\n    <div>Type: {{event_type}}</div>\n\n  </div>\n</div>",
+        "contentPartials": [],
+        "defaultContent": "The query didn't return any results.",
+        "editor": {
+          "format": "auto",
+          "language": "html"
+        },
+        "editors": [],
+        "externalStyles": [],
+        "helpers": "",
+        "renderMode": "everyRow",
+        "styles": "",
+        "wrap": true
+      },
+      "pluginVersion": "6.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "P40AE60E18F02DE32"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  y.pub_date,\n  y.title,\n  y.link,\n  y.source_name,\n  y.source_url,\n  y.media_url,\n  a.sentiment_score,\n  a.relevance_score,\n  a.event_importance,\n  a.event_type,\n  ROUND(\n    (a.sentiment_score\n     * a.relevance_score\n     * a.event_importance\n    )::numeric\n  , 2\n  ) AS final_score\nFROM yf_rss_items AS y\nINNER JOIN analysis_results AS a\n  ON y.guid = a.guid\n  AND y.pub_date = a.pub_date\nWHERE\n  -- last 24h\n  y.pub_date >= NOW() - INTERVAL '24 HOURS'\n  -- filter event_type via dashboard variable:\n  AND a.event_type IN ($eventType)\nORDER BY ${sortBy:raw} DESC\nLIMIT 100;\n",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Last 24hr US news",
+      "transformations": [
+        {
+          "id": "formatTime",
+          "options": {
+            "outputFormat": "YYYY-MM-DD HH:MM",
+            "timeField": "pub_date",
+            "timezone": "browser",
+            "useTimezone": true
+          }
+        }
+      ],
+      "type": "marcusolsson-dynamictext-panel"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 7,
+      "panels": [],
+      "title": "Stat",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P40AE60E18F02DE32"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": ""
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "maxHeight": 600,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "P40AE60E18F02DE32"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  DATE(pub_date) AS time,\n  COUNT(*) AS news_count\nFROM yf_rss_items\nGROUP BY time\nORDER BY time ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Number of News Items per Day",
+      "transformations": [
+        {
+          "id": "formatTime",
+          "options": {}
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P40AE60E18F02DE32"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "points",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 10,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "maxHeight": 600,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "P40AE60E18F02DE32"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  DATE(pub_date) AS time,\n  event_type AS event_type,\n  SUM(sentiment_score * relevance_score * event_importance) AS final_score\nFROM analysis_results\nGROUP BY time, event_type\nORDER BY time ASC, event_type;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Daily Final Score by Event Type",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": "",
+        "allowCustomValue": false,
+        "current": {
+          "selected": false,
+          "text": "^GSPC",
+          "value": "^GSPC"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "TimescaleDB"
+        },
+        "definition": "SELECT DISTINCT symbol FROM stock_data ORDER BY symbol",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Target Stock",
+        "multi": false,
+        "name": "target_stock",
+        "options": [],
+        "query": "SELECT DISTINCT symbol FROM stock_data ORDER BY symbol",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "pub_date",
+          "value": "pub_date"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "RSS sort by",
+        "multi": false,
+        "name": "sortBy",
+        "options": [
+          {
             "selected": true,
             "text": "pub_date",
             "value": "pub_date"
           },
-          "hide": 0,
-          "includeAll": false,
-          "label": "RSS sort by",
-          "multi": false,
-          "name": "sortBy",
-          "options": [
-            {
-              "selected": true,
-              "text": "pub_date",
-              "value": "pub_date"
-            },
-            {
-              "selected": false,
-              "text": "sentiment_score",
-              "value": "sentiment_score"
-            },
-            {
-              "selected": false,
-              "text": "relevance_score",
-              "value": "relevance_score"
-            },
-            {
-              "selected": false,
-              "text": "event_importance",
-              "value": "event_importance"
-            },
-            {
-              "selected": false,
-              "text": "final_score",
-              "value": "final_score"
-            }
-          ],
-          "query": "pub_date,\nsentiment_score,\nrelevance_score,\nevent_importance,\nfinal_score",
-          "queryValue": "",
-          "skipUrlSync": false,
-          "type": "custom"
-        },
-        {
-          "allValue": "",
-          "current": {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
+          {
+            "selected": false,
+            "text": "sentiment_score",
+            "value": "sentiment_score"
           },
-          "definition": "SELECT DISTINCT event_type\nFROM analysis_results\nWHERE  pub_date >= NOW() - INTERVAL '24 HOURS'\nORDER BY event_type;\n",
-          "hide": 0,
-          "includeAll": true,
-          "label": "News Event Type",
-          "multi": false,
-          "name": "eventType",
-          "options": [],
-          "query": "SELECT DISTINCT event_type\nFROM analysis_results\nWHERE  pub_date >= NOW() - INTERVAL '24 HOURS'\nORDER BY event_type;\n",
-          "refresh": 1,
-          "regex": "",
-          "skipUrlSync": false,
-          "sort": 1,
-          "type": "query"
-        }
-      ]
-    },
-    "time": {
-      "from": "now-7d",
-      "to": "now"
-    },
-    "timeRangeUpdatedDuringEditOrView": false,
-    "timepicker": {},
-    "timezone": "",
-    "title": "Event-based Stock Price Prediction",
-    "uid": "25a45c99-0657-4f84-8c4a-ffd0fd29e3c1",
-    "version": 9,
-    "weekStart": ""
-  }
+          {
+            "selected": false,
+            "text": "relevance_score",
+            "value": "relevance_score"
+          },
+          {
+            "selected": false,
+            "text": "event_importance",
+            "value": "event_importance"
+          },
+          {
+            "selected": false,
+            "text": "final_score",
+            "value": "final_score"
+          }
+        ],
+        "query": "pub_date,\nsentiment_score,\nrelevance_score,\nevent_importance,\nfinal_score",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "P40AE60E18F02DE32"
+        },
+        "definition": "SELECT DISTINCT event_type\nFROM analysis_results\nWHERE  pub_date >= NOW() - INTERVAL '24 HOURS'\nORDER BY event_type;\n",
+        "hide": 0,
+        "includeAll": true,
+        "label": "News Event Type",
+        "multi": false,
+        "name": "eventType",
+        "options": [],
+        "query": "SELECT DISTINCT event_type\nFROM analysis_results\nWHERE  pub_date >= NOW() - INTERVAL '24 HOURS'\nORDER BY event_type;\n",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timeRangeUpdatedDuringEditOrView": false,
+  "timepicker": {},
+  "timezone": "",
+  "title": "Event-based Stock Price Prediction",
+  "uid": "25a45c99-0657-4f84-8c4a-ffd0fd29e3c1",
+  "version": 18,
+  "weekStart": ""
+}
